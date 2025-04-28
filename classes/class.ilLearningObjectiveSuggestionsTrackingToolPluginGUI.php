@@ -7,17 +7,22 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 {
     private ilGlobalTemplateInterface $tpl;
 
+    private ilSetting $settings;
+
+    private $ctrl;
+
     private $pl;
 
     public function __construct()
     {
         global $DIC;
+
         parent::__construct();
-        global $DIC;
         $this->ctrl = $DIC->ctrl();
         $this->tpl = $DIC->ui()->mainTemplate();
-        //$this->pl = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
+        $this->pl = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
         $this->lng = $DIC->language();
+        $this->settings = new ilSetting($this->pl->getPluginName());
     }
 
     /**
@@ -31,13 +36,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $cmd = $ilCtrl->getCmd();
 
-        if (in_array($cmd, [
-            "create",
-            "update",
-            "edit",
-            "cancel"
-        ])
-        ) {
+        $cmds = [
+            'create',
+            'update',
+            'edit',
+            'cancel'
+        ];
+        if (in_array($cmd, $cmds)) {
             $this->$cmd();
         }
     }
@@ -47,10 +52,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * Generates the creation dialog (opening config for the first time)
      *
      * @return void
+     * @throws ilCtrlException
      */
     public function insert(): void
     {
-        global $tpl;
+        global $DIC;
+
+        $DIC->ctrl()->redirectByClass(self::class, 'create');
+        //$this->create();
     }
 
     /**
@@ -72,7 +81,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function create(): void
     {
-        $this->save(true);
+        /*$this->save(true);*/
+
+
+        $properties = [];
+        if ($this->createElement($properties)) {
+            $this->tpl->setOnScreenMessage("success", "Dashboard wurde angelegt", true);
+            $this->returnToParent();
+        }
+
     }
 
     /**
@@ -111,6 +128,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @param       $plugin_version
      * @return string
      * @throws \ilTemplateException
+     * @throws ilSystemStyleException
      */
     function getElementHTML($a_mode, array $a_properties, $plugin_version): string
     {
@@ -120,8 +138,32 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
-        $tpl = $this->getPlugin()->getTemplate('tpl.tracking-tool.html');
+        //$tpl = $this->pl->getTemplate('tpl.tracking-tool.html');
 
+        $pl = $this->getPlugin();
+        $tpl = $this->pl->getTemplate('tpl.tracking-tool.html');
+
+       /* $this->tpl = new \ilTemplate(
+            'Customizing/global/plugins/Services/COPage/PageComponent/SemanticNetwork/templates/tpl.semantic-network.html',
+            true,
+            true,
+        );*/
+
+        /*$this->tpl = new ilGlobalTemplate(
+            'tpl.tracking-tool.html',
+            true,
+            true,
+            'Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool',
+        );*/
+
+
+
+        $tpl->setCurrentBlock('test');
+        /*$tpl->setVariable("ARIA_PRESSED", $aria_pressed);*/
+        //$this->tpl->parseCurrentBlock();
+
+        $tpl->parseCurrentBlock();
+        dd($tpl->get());
 
         return $tpl->get();
     }
