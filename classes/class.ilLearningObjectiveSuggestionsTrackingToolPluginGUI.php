@@ -1,18 +1,13 @@
 <?php
 
-namespace LearningObjectiveSuggestionsTrackingTool\classes;
-
-use ilGlobalTemplateInterface;
-use ilPageComponentPluginGUI;
-
 /**
- * @ilCtrl_isCalledBy LearningObjectiveSuggestionsTrackingToolGUI: ilPCPluggedGUI
+ * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
  */
-class LearningObjectiveSuggestionsTrackingToolGUI extends ilPageComponentPluginGUI
+class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponentPluginGUI
 {
     private ilGlobalTemplateInterface $tpl;
 
-    private LearningObjectiveSuggestionsTrackingToolPlugin $pl;
+    private $pl;
 
     public function __construct()
     {
@@ -21,7 +16,7 @@ class LearningObjectiveSuggestionsTrackingToolGUI extends ilPageComponentPluginG
         global $DIC;
         $this->ctrl = $DIC->ctrl();
         $this->tpl = $DIC->ui()->mainTemplate();
-        $this->pl = LearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
+        //$this->pl = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
         $this->lng = $DIC->language();
     }
 
@@ -115,6 +110,7 @@ class LearningObjectiveSuggestionsTrackingToolGUI extends ilPageComponentPluginG
      * @param array $a_properties
      * @param       $plugin_version
      * @return string
+     * @throws \ilTemplateException
      */
     function getElementHTML($a_mode, array $a_properties, $plugin_version): string
     {
@@ -124,30 +120,8 @@ class LearningObjectiveSuggestionsTrackingToolGUI extends ilPageComponentPluginG
             return '';
         }
 
-        $calendar_activated = $a_properties["calendar_activated"];
-        $mail_activated = $a_properties["mail_activated"];
-        $tasks_activated = $a_properties["tasks_activated"];
+        $tpl = $this->getPlugin()->getTemplate('tpl.tracking-tool.html');
 
-        $tpl = $this->getPlugin()->getTemplate("tpl.content.html");
-
-        if ($calendar_activated) {
-            $calendar = $this->getCalendarElement();
-            $tpl->setVariable("CALENDAR", $calendar);
-        }
-
-        if ($mail_activated) {
-            $mail = $this->getMailElement();
-            $tpl->setVariable("MAIL", $mail);
-        }
-
-        if ($tasks_activated) {
-            $tasks = $this->getTasksElement();
-            $tpl->setVariable("TASKS", $tasks);
-        }
-
-        if ($a_mode === 'edit') {
-            $this->tpl->addInlineCss(".kpg_calendar_component {pointer-events: none;}");
-        }
 
         return $tpl->get();
     }

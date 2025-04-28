@@ -1,12 +1,9 @@
 <?php
 
-namespace LearningObjectiveSuggestionsTrackingTool\classes;
-
-use ilPageComponentPlugin;
-use ilComponentFactory;
-use ilPlugin;
-
-class LearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPlugin
+/**
+ * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI
+ */
+class ilLearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPlugin
 {
     /**
      * @param $a_type
