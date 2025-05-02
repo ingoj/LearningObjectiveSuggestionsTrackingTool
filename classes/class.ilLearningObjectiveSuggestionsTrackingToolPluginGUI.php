@@ -138,34 +138,149 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
-        //$tpl = $this->pl->getTemplate('tpl.tracking-tool.html');
-
         $pl = $this->getPlugin();
-        $tpl = $this->pl->getTemplate('tpl.tracking-tool.html');
+        $tpl = $pl->getTemplate('tpl.tracking-tool.html');
 
-       /* $this->tpl = new \ilTemplate(
-            'Customizing/global/plugins/Services/COPage/PageComponent/SemanticNetwork/templates/tpl.semantic-network.html',
-            true,
-            true,
-        );*/
+        $userId = $DIC->user()->getId();
+        $sorted = $this->sortColumns($userId);
+        $finalTestsStates = ilLearnObjectFinalTestStates::getData([$userId]);
+        $learningObjectives = [];
 
-        /*$this->tpl = new ilGlobalTemplate(
-            'tpl.tracking-tool.html',
-            true,
-            true,
-            'Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool',
-        );*/
+        if (count($finalTestsStates)) {
+            foreach ($sorted as $sort_key => $sort_arr) {
+
+                if (array_key_exists($sort_key, $finalTestsStates[$userId])) {
+                    /** @var ilLearnObjectFinalTestState $finalTestsState */
+
+                    /** @var ilLearnObjectFinalTestState $finalTestsState */
+                    $finalTestsStates_course = $finalTestsStates[$userId][$sort_key];
+
+                    foreach ($finalTestsStates_course as $finalTestsState) {
+                        $learningObjectives[$finalTestsState->getLocftestCrsObjId()] = array(
+                            'txt' => $finalTestsState->getLocftestLearnObjectiveTitle(),
+                            'obj_id' => $sort_arr['obj_id'],
+                            'objective_id' => $sort_arr['objective_id'],
+                            'default' => true,
+                            'width' => 'auto',
+                        );
+                    }
+
+                }
+            }
+        }
+
+        $trackingToolData = [];
+        $processed = array();
+        $accordionLearningObjectives = [];
+        if (count($finalTestsStates)) {
+            foreach ($finalTestsStates[$userId] as $rec) {
+                /**
+                * @var ilLearnObjectFinalTestState $rec;
+                */
+                $accordionLearningObjectives[$rec[0]->getLocftestCrsObjId()] = 0;
+            }
+        }
+
+        foreach ($finalTestsStates[$userId] as $finalTests) {
+            /**
+            * @var ilLearnObjectFinalTestState $finalTests;
+            */
+
+            foreach($finalTests as $key => $value) {
+                if ($value->getLocftestCrsObjId()) {
+                    // check if data already exists
+                    $crsObjId = $value->getLocftestCrsObjId();
+                    $crsObjectiveId = $value->getLocftestObjectiveId();
+                    if (isset($processed[$crsObjId])) {
+                        if (isset($processed[$crsObjId][$crsObjectiveId])) {
+                            continue;
+                        }
+                    }
+
+                    $trackingToolData[$value->getLocftestCrsObjId()][] = [
+                        'title' => $value->getLocftestObjectiveTitle(),
+                        'test_percentage' => $value->getLocftestPercentage(),
+                        'test_required_percentage' => $value->getLocftestQplsRequiredPercentage(),
+                        'what_is' => 1
+                    ];
+
+                    $accordionLearningObjectives[$value->getLocftestCrsObjId()] += 1;
+                    $processed[$crsObjId][$crsObjectiveId] = $userId;
+                }
+            }
+        }
 
 
 
-        $tpl->setCurrentBlock('test');
-        /*$tpl->setVariable("ARIA_PRESSED", $aria_pressed);*/
-        //$this->tpl->parseCurrentBlock();
 
+        foreach($learningObjectives as $key => $learningObjective) {
+            foreach($trackingToolData as $k => $data) {
+
+                    if ($key === $k) {
+                        $learningObjectives[$key]['courses'] = $data;
+                    }
+
+            }
+
+        }
+
+
+        $html = '';
+        foreach ($learningObjectives as $key => $learningObjective) {
+            $html .= '<hr>';
+            $html .= '<div class="accordion">' . $learningObjective['txt'] . '</div>';
+            $html .= '<div>ID: ' . $key . '</div>';
+            $html .= '<h3>Course: ' . $key . '</h3>';
+
+            foreach ($learningObjective['courses'] as $k => $course) {
+
+                $html .= '<div>Title: ' . $course['title'] . '</div>';
+                $html .= '<div>Test Percentage: ' . $course['test_percentage'] . '</div>';
+                $html .= '<div>Test Required Percentage: ' . $course['test_required_percentage'] . '</div>';
+                $html .= '<div>What Is: ' . $course['what_is'] . '</div>';
+            }
+        }
+
+/*        $tpl->setCurrentBlock('tracking_tool');*/
+        $tpl->setVariable('HTML', $html);
         $tpl->parseCurrentBlock();
-        dd($tpl->get());
 
         return $tpl->get();
+    }
+
+    private function sortColumns(int $userId): array
+    {
+        //First sort scores
+        $scores = NewLearningObjectiveScores::getData($userId);
+        //if the scores are equal, sort because of the weight value
+        $weights = getFineWeights::getData();
+        $newWeights = (array)$weights;
+
+        $sorting = array();
+
+        foreach ($scores as $score) {
+
+            /**
+             * @var NewLearningObjectiveScore $score
+             */
+
+            if (key_exists('weight_fine_'.$score->getObjectiveId(),$newWeights)) {
+                $fine = $newWeights['weight_fine_'.$score->getObjectiveId()];
+            } else {
+                //fallback
+                $fine = 1;
+            }
+
+            $sorting[$score->getObjectiveId()] = [
+                'title' => $score->getTitle(),
+                'score' => $score->getScore(),
+                'obj_id' => $score->getCourseObjId(),
+                'objective_id' => $score->getObjectiveId(),
+                'weight' => $fine
+            ];
+        }
+
+        return $sorting;
     }
 }
 
