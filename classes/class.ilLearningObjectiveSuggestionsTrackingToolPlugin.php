@@ -38,4 +38,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPl
         $component_factory = $DIC['component.factory'];
         return $component_factory->getPlugin(LearningObjectiveSuggestionsTrackingToolConstants::PLUGIN_ID);
     }
+
+    public function getCssFiles(string $a_mode): array
+    {
+        return ['/css/tracking-tool.css'];
+    }
+
+    public function getJavascriptFiles(string $a_mode): array
+    {
+        return ['/js/tracking-tool.js'];
+    }
 }

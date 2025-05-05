@@ -210,24 +210,64 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
 
-
-
-
         foreach($learningObjectives as $key => $learningObjective) {
             foreach($trackingToolData as $k => $data) {
 
-                    if ($key === $k) {
-                        $learningObjectives[$key]['courses'] = $data;
+                if ($key === $k) {
+                    $completed = 0;
+                    foreach($data as $keyCourse => $course) {
+                        if ($course['test_percentage'] >= $course['test_required_percentage']) {
+                            $completed ++;
+                        }
                     }
-
+                    $learningObjectives[$key]['courses'] = $data;
+                    $learningObjectives[$key]['count_completed_courses'] = $completed;
+                }
             }
-
         }
 
+        $html = '<div class="tracking-tool">';
 
-        $html = '';
+
         foreach ($learningObjectives as $key => $learningObjective) {
-            $html .= '<hr>';
+            $classStatusCourses = 'completed-courses';
+            if ($learningObjective['count_completed_courses'] < count($learningObjective['courses'])) {
+                $classStatusCourses = 'not-completed-courses';
+            }
+
+            $html .= '<button class="tracking-tool-accordion-button">' . $learningObjective['txt'] .  '<span class="icon-check">check</span><span class="count-courses ' . $classStatusCourses . '">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>' . '</button>';
+            $html .= '<div class="tracking-tool-panel">';
+            $html .= '<div class="tracking-tool-test-required-percentage">';
+            $html .= '[test_required_percentage]';
+            $html .= '</div>';
+
+
+            foreach ($learningObjective['courses'] as $k => $course) {
+
+
+                $html .= '<div class="accordion-content"><a href="#">' . $course['title'] . '</a><span class="percentage">' . ($course['test_percentage'] ?? 0) .'%</span></div>';
+                $html .= '<div class="tracking-tool-progress-container">';
+                $html .= '<div class="target-line" style="width: ' . $course['test_required_percentage'] . '%;"></div>';
+                $html .= '<div class="progress-bar" style="width: ' . ($course['test_percentage'] ?? 0) . '%;"></div>';
+                $html .= '</div>';
+            }
+
+            $html .= '</div>';
+        }
+      /*  $html .= '<button class="tracking-tool-accordion">Section 2</button>';
+        $html .= '<div class="tracking-tool-panel">';
+        $html .= '<p>Lorem ipsum...</p>';
+        $html .= '</div>';
+        $html .= '<button class="tracking-tool-accordion">Section 3</button>';
+        $html  .= '<div class="tracking-tool-panel">';
+        $html .='<p>Lorem ipsum...</p>';
+        $html .= '</div>';*/
+
+
+
+
+        foreach ($learningObjectives as $key => $learningObjective) {
+            $html .= '<hr><hr>';
             $html .= '<div class="accordion">' . $learningObjective['txt'] . '</div>';
             $html .= '<div>ID: ' . $key . '</div>';
             $html .= '<h3>Course: ' . $key . '</h3>';
@@ -238,8 +278,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $html .= '<div>Test Percentage: ' . $course['test_percentage'] . '</div>';
                 $html .= '<div>Test Required Percentage: ' . $course['test_required_percentage'] . '</div>';
                 $html .= '<div>What Is: ' . $course['what_is'] . '</div>';
+                $html .= '<hr>';
             }
         }
+
+        $html .= '</div>';
 
 /*        $tpl->setCurrentBlock('tracking_tool');*/
         $tpl->setVariable('HTML', $html);
