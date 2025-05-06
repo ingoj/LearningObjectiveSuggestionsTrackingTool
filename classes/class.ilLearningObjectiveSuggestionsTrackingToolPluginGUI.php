@@ -230,43 +230,75 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
 
         foreach ($learningObjectives as $key => $learningObjective) {
-            $classStatusCourses = 'completed-courses';
+            $classStatusCourses = 'completed';
             if ($learningObjective['count_completed_courses'] < count($learningObjective['courses'])) {
-                $classStatusCourses = 'not-completed-courses';
+                $classStatusCourses = 'not-completed';
+                $checkIcon = 'not-completed.svg';
+            } else  {
+                $checkIcon = 'passed.svg';
             }
 
-            $html .= '<button class="tracking-tool-accordion-button">' . $learningObjective['txt'] .  '<span class="icon-check">check</span><span class="count-courses ' . $classStatusCourses . '">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>' . '</button>';
+
+            // TODO Remove it
+           /* dd(ilCourseObjective::_lookupContainerIdByObjectiveId(96));*/
+           /* $refId = new ilObjLearningModule($key, false);
+
+            dd($refId);
+
+            dd($learningObjectives);
+            $ref_id = $DIC->ctrl()->getRequestTargetRefId(); // current ref_id*/
+            /*$tree = $DIC->repositoryTree();
+            $parent_course_ref_id = $tree->checkForParentType(96, 'crs'); // 'crs' is the course type
+
+            if ($parent_course_ref_id) {
+                $course_obj_id = ilObject::_lookupObjId(85);
+                $course = ilObjectFactory::getInstanceByObjId($course_obj_id);
+                // $course is your parent course object
+
+                dd($course);
+            }*/
+
+
+
+            $html .= '<div class="tracking-tool-accordion-item">';
+            $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
+            $html .= '<span class="learning-objective-title"><a href="#">' . $learningObjective['txt'] . '</a></span>';
+
+            $html .= '<span class="icon-check icon-check-' . $classStatusCourses . '">';
+            $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/' . $checkIcon . '">';
+            $html .= '</span>';
+            $html .= '<span class="count-courses ' . $classStatusCourses . '-courses">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>';
+            $html .= '</div>';
+
             $html .= '<div class="tracking-tool-panel">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '[test_required_percentage]';
             $html .= '</div>';
 
-
             foreach ($learningObjective['courses'] as $k => $course) {
 
 
-                $html .= '<div class="accordion-content"><a href="#">' . $course['title'] . '</a><span class="percentage">' . ($course['test_percentage'] ?? 0) .'%</span></div>';
+                $html .= '<div class="accordion-content">' . $course['title'] . '<span class="percentage">' . ($course['test_percentage'] ?? 0) .'%</span></div>';
                 $html .= '<div class="tracking-tool-progress-container">';
                 $html .= '<div class="target-line" style="width: ' . $course['test_required_percentage'] . '%;"></div>';
-                $html .= '<div class="progress-bar" style="width: ' . ($course['test_percentage'] ?? 0) . '%;"></div>';
+
+                $classProgressBar = 'progress-bar';
+                if ($course['test_percentage'] > $course['test_required_percentage']) {
+                    $classProgressBar = 'progress-bar-percentage-completed';
+                }
+
+                $html .= '<div class="' . $classProgressBar . '" style="width: ' . ($course['test_percentage'] ?? 0) . '%;"></div>';
                 $html .= '</div>';
             }
 
             $html .= '</div>';
         }
-      /*  $html .= '<button class="tracking-tool-accordion">Section 2</button>';
-        $html .= '<div class="tracking-tool-panel">';
-        $html .= '<p>Lorem ipsum...</p>';
-        $html .= '</div>';
-        $html .= '<button class="tracking-tool-accordion">Section 3</button>';
-        $html  .= '<div class="tracking-tool-panel">';
-        $html .='<p>Lorem ipsum...</p>';
-        $html .= '</div>';*/
 
 
 
 
-        foreach ($learningObjectives as $key => $learningObjective) {
+        // TODO Remove this
+        /*foreach ($learningObjectives as $key => $learningObjective) {
             $html .= '<hr><hr>';
             $html .= '<div class="accordion">' . $learningObjective['txt'] . '</div>';
             $html .= '<div>ID: ' . $key . '</div>';
@@ -282,7 +314,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
 
-        $html .= '</div>';
+        $html .= '</div>';*/
 
 /*        $tpl->setCurrentBlock('tracking_tool');*/
         $tpl->setVariable('HTML', $html);
