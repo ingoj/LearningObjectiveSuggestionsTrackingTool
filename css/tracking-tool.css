@@ -1,13 +1,28 @@
+.container-tracking-tool  {
+    border: 2px solid #2A5788;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    padding: 10px;
+}
+
+.container-tracking-tool .min-percent  {
+    color: #97D312;
+}
+
 .tracking-tool .tracking-tool-accordion-item {
-    background-color: #eee;
+    background-color: #E3E8EE;
     border: none;
-    color: #444;
+    color: #516583;
     margin-top: 30px;
     outline: none;
     padding: 18px;
     text-align: left;
     transition: 0.4s;
     width: 100%;
+}
+
+.tracking-tool .accordion-content  {
+    color: #516583;
 }
 
 .tracking-tool .tracking-tool-tree-icon  {
@@ -53,25 +68,26 @@
 
 .tracking-tool .tracking-tool-progress-container .progress-bar {
     height: 100%;
-    background-color: green;
+    background-color: #EA4052;
     text-align: center;
     line-height: 30px;
     color: white;
     border-radius: 5px 5px 5px;
-    transition: width 0.5s ease-in-out;
+    /*transition: width 0.5s ease-in-out;*/
 }
 
 .tracking-tool .tracking-tool-progress-container .progress-bar-percentage-completed  {
     height: 100%;
-    background-color: green;
+    background-color: #97D312;
     text-align: center;
     line-height: 30px;
     color: white;
     border-radius: 5px 0 0 5px;
-    transition: width 0.5s ease-in-out;
+    /*transition: width 0.5s ease-in-out;*/
 }
 
 .tracking-tool .accordion-content .percentage  {
+    color: #2A5788;
     font-weight: bold;
     margin-left: 10px;
 }
@@ -81,7 +97,7 @@
 }
 
 .tracking-tool .completed-courses  {
-    background-color: green;
+    background-color: #97D312;
     -webkit-border-top-left-radius: 2px;
     border-top-left-radius: 2px;
     -webkit-border-bottom-left-radius: 2px;
@@ -91,7 +107,7 @@
 }
 
 .tracking-tool .not-completed-courses  {
-    background-color: red;
+    background-color: #EA4052;
     -webkit-border-top-left-radius: 2px;
     border-top-left-radius: 2px;
     -webkit-border-bottom-left-radius: 2px;
@@ -105,7 +121,7 @@
 }
 
 .tracking-tool .icon-check.icon-check-not-completed  {
-    background-color: #C0C0C0;
+    background-color: #A1B5CB;
     -webkit-border-top-right-radius: 2px;
     border-top-right-radius: 2px;
     -webkit-border-bottom-right-radius: 2px;
@@ -116,7 +132,7 @@
 }
 
 .tracking-tool .icon-check.icon-check-completed  {
-    background-color: #2F5A28;
+    background-color: #63B563;
     -webkit-border-top-right-radius: 2px;
     border-top-right-radius: 2px;
     -webkit-border-bottom-right-radius: 2px;

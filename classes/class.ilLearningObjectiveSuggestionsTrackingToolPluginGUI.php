@@ -151,8 +151,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
                 if (array_key_exists($sort_key, $finalTestsStates[$userId])) {
                     /** @var ilLearnObjectFinalTestState $finalTestsState */
-
-                    /** @var ilLearnObjectFinalTestState $finalTestsState */
                     $finalTestsStates_course = $finalTestsStates[$userId][$sort_key];
 
                     foreach ($finalTestsStates_course as $finalTestsState) {
@@ -174,18 +172,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $accordionLearningObjectives = [];
         if (count($finalTestsStates)) {
             foreach ($finalTestsStates[$userId] as $rec) {
-                /**
-                * @var ilLearnObjectFinalTestState $rec;
-                */
                 $accordionLearningObjectives[$rec[0]->getLocftestCrsObjId()] = 0;
             }
         }
 
         foreach ($finalTestsStates[$userId] as $finalTests) {
-            /**
-            * @var ilLearnObjectFinalTestState $finalTests;
-            */
-
             foreach($finalTests as $key => $value) {
                 if ($value->getLocftestCrsObjId()) {
                     // check if data already exists
@@ -272,7 +263,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $html .= '<div class="tracking-tool-panel">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
-            $html .= '[test_required_percentage]';
             $html .= '</div>';
 
             foreach ($learningObjective['courses'] as $k => $course) {
@@ -317,6 +307,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $html .= '</div>';*/
 
 /*        $tpl->setCurrentBlock('tracking_tool');*/
+        $tpl->setCurrentBlock('tracking_tool');
         $tpl->setVariable('HTML', $html);
         $tpl->parseCurrentBlock();
 
@@ -329,7 +320,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $scores = NewLearningObjectiveScores::getData($userId);
         //if the scores are equal, sort because of the weight value
         $weights = getFineWeights::getData();
-        $newWeights = (array)$weights;
 
         $sorting = array();
 
@@ -339,8 +329,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
              * @var NewLearningObjectiveScore $score
              */
 
-            if (key_exists('weight_fine_'.$score->getObjectiveId(),$newWeights)) {
-                $fine = $newWeights['weight_fine_'.$score->getObjectiveId()];
+            if (key_exists('weight_fine_'.$score->getObjectiveId(),$weights)) {
+                $fine = $weights['weight_fine_'.$score->getObjectiveId()];
             } else {
                 //fallback
                 $fine = 1;
