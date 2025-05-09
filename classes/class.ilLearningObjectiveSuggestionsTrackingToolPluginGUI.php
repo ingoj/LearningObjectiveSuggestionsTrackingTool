@@ -142,7 +142,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $tpl = $pl->getTemplate('tpl.tracking-tool.html');
 
         $userId = $DIC->user()->getId();
-        $sorted = $this->sortColumns($userId);
+        $sorted = $this->sortByScore($userId);
         $finalTestsStates = ilLearnObjectFinalTestStates::getData([$userId]);
         $learningObjectives = [];
 
@@ -159,10 +159,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                             'obj_id' => $sort_arr['obj_id'],
                             'objective_id' => $sort_arr['objective_id'],
                             'default' => true,
+                            'score' => $sort_arr['score'],
                             'width' => 'auto',
                         );
                     }
-
                 }
             }
         }
@@ -220,7 +220,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $html = '<div class="tracking-tool">';
 
 
+        $index = 1;
+        $maxWeight = 0;
         foreach ($learningObjectives as $key => $learningObjective) {
+            if ($index === 1) {
+                $maxWeight = $learningObjective['score'];
+            }
+
             $classStatusCourses = 'completed';
             if ($learningObjective['count_completed_courses'] < count($learningObjective['courses'])) {
                 $classStatusCourses = 'not-completed';
@@ -249,7 +255,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 dd($course);
             }*/
 
+            $countWeightSymbols = 3;
+            if ($learningObjective['score'] < $maxWeight) {
+                $countWeightSymbols = 2;
+            }
 
+            $htmlIconsAlert = '';
+            for ($i = 1; $i <= $countWeightSymbols; $i++) {
+                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert.svg" class="icon-weight">';
+            }
+
+            if ($learningObjective['score'] < $maxWeight) {
+                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
+            }
 
             $html .= '<div class="tracking-tool-accordion-item">';
             $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
@@ -259,21 +277,31 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/' . $checkIcon . '">';
             $html .= '</span>';
             $html .= '<span class="count-courses ' . $classStatusCourses . '-courses">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>';
+            $html .= '<div class="container-weight">';
+            $html .= '<span class="weight">' . $htmlIconsAlert . '</span>';
+            $html .= '</div>';
             $html .= '</div>';
 
             $html .= '<div class="tracking-tool-panel">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '</div>';
 
+
             foreach ($learningObjective['courses'] as $k => $course) {
 
 
                 $html .= '<div class="accordion-content">' . $course['title'] . '<span class="percentage">' . ($course['test_percentage'] ?? 0) .'%</span></div>';
                 $html .= '<div class="tracking-tool-progress-container">';
-                $html .= '<div class="target-line" style="width: ' . $course['test_required_percentage'] . '%;"></div>';
+
+                $targetLineClass = 'target-line';
+
+                if ($course['test_percentage'] >= $course['test_required_percentage']) {
+                    $targetLineClass .= '-reached';
+                }
+                $html .= '<div class="' . $targetLineClass . '" style="width: ' . ($course['test_required_percentage'] ?? '') . '%;"></div>';
 
                 $classProgressBar = 'progress-bar';
-                if ($course['test_percentage'] > $course['test_required_percentage']) {
+                if ($course['test_percentage'] >= $course['test_required_percentage']) {
                     $classProgressBar = 'progress-bar-percentage-completed';
                 }
 
@@ -282,6 +310,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
 
             $html .= '</div>';
+
+            $index++;
         }
 
 
@@ -308,32 +338,36 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
 /*        $tpl->setCurrentBlock('tracking_tool');*/
         $tpl->setCurrentBlock('tracking_tool');
+        $tpl->setVariable('TITLE', $this->pl->txt('title'));
+        $tpl->setVariable('SUBTITLE', $this->pl->txt('subtitle'));
+        $tpl->setVariable('DESCRIPTION', $this->pl->txt('description'));
+        $tpl->setVariable('LEARNING_SUGGESTION', $this->pl->txt('learning_suggestion') . ' <span class="lets-get-started">' . $this->pl->txt('lets_get_started') . '</span>');
         $tpl->setVariable('HTML', $html);
         $tpl->parseCurrentBlock();
 
         return $tpl->get();
     }
 
-    private function sortColumns(int $userId): array
+    /**
+     * @param int $userId
+     * @return array
+     */
+    private function sortByScore(int $userId): array
     {
         //First sort scores
         $scores = NewLearningObjectiveScores::getData($userId);
         //if the scores are equal, sort because of the weight value
         $weights = getFineWeights::getData();
 
-        $sorting = array();
-
+        $sorting = [];
         foreach ($scores as $score) {
 
+            $fine = 1;
             /**
              * @var NewLearningObjectiveScore $score
              */
-
             if (key_exists('weight_fine_'.$score->getObjectiveId(),$weights)) {
                 $fine = $weights['weight_fine_'.$score->getObjectiveId()];
-            } else {
-                //fallback
-                $fine = 1;
             }
 
             $sorting[$score->getObjectiveId()] = [
