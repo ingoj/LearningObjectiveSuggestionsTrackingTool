@@ -22,14 +22,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPl
      */
     public function onDelete(array $a_properties, string $a_plugin_version, bool $move_operation = false): void
     {
-        // ...
     }
 
+    /**
+     * @return string
+     */
     public function getPluginName(): string
     {
         return LearningObjectiveSuggestionsTrackingToolConstants::PLUGIN_NAME;
     }
 
+    /**
+     * @return ilPlugin
+     */
     public static function getInstance(): ilPlugin
     {
         global $DIC;
@@ -39,11 +44,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPl
         return $component_factory->getPlugin(LearningObjectiveSuggestionsTrackingToolConstants::PLUGIN_ID);
     }
 
+    /**
+     * @param string $a_mode
+     * @return string[]
+     */
     public function getCssFiles(string $a_mode): array
     {
         return ['/css/tracking-tool.css'];
     }
 
+    /**
+     * @param string $a_mode
+     * @return string[]
+     */
     public function getJavascriptFiles(string $a_mode): array
     {
         return ['/js/tracking-tool.js'];
