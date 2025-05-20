@@ -69,9 +69,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function create(): void
     {
+        global $DIC;
+
         $properties = [];
         if ($this->createElement($properties)) {
-            $this->tpl->setOnScreenMessage("success", "Tracking Tool wurde angelegt", true);
+            $tpl = $DIC->ui()->mainTemplate();
+            $tpl->setOnScreenMessage('success', 'Tracking Tool wurde angelegt', true);
             $this->returnToParent();
         }
 
