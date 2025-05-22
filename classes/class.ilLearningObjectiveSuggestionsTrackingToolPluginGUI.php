@@ -140,7 +140,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
         $learningObjectives = $this->storeCoursesInLearningObjectives($learningObjectives, $trackingToolData);
-        $this->buildAccordionHtml($learningObjectives);
+        $this->buildAccordionHtml($learningObjectives, $userId);
 
         return $this->tpl->get();
     }
@@ -239,7 +239,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @return void
      * @throws ilCtrlException
      */
-    private function buildAccordionHtml(array $learningObjectives): void
+    private function buildAccordionHtml(array $learningObjectives, int $userId): void
     {
         $html = '<div class="tracking-tool">';
 
@@ -277,8 +277,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
 
             $html .= '<div class="tracking-tool-accordion-item">';
-            $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
-            $html .= '<span class="learning-objective-title"><a href="' . $courseLink . '">' . $learningObjective['txt'] . '</a></span>';
+            $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="collapse">';
+            $html .= '<span class="learning-objective-title">';
+            $html .= '<a href="' . $courseLink . '">' . $learningObjective['txt'] . '</a>';
+            $html .= '</span>';
 
             $html .= '<span class="icon-check icon-check-' . $classStatusCourses . '">';
             $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/' . $checkIcon . '">';
@@ -289,7 +291,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '</div>';
             $html .= '</div>';
 
-            $html .= '<div class="tracking-tool-panel">';
+            $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $key .'-'. $userId . '">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '</div>';
             $html .= $this->buildAccordionDropdownHtml($learningObjective['courses']);
@@ -311,7 +313,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         foreach ($learningObjectiveCourses as $k => $course) {
             $html .= '<div class="percent-line" style="width: ' . ($course['test_required_percentage'] ?? '') . '%;">';
             $html .= '<div class="percent-line-percent"><span>' . $course['test_required_percentage'] . '</span></div>';
-            $html .= '<div class="line"><div></div></div>';
+            $html .= '<div class="line">';
+            if ($course['test_required_percentage'] != null) {
+                $html .= '<div></div>';
+            }
+            $html .= '</div>';
             $html .= '</div>';
             $html .= '<div class="accordion-content">' . $course['title'] . '<span class="percentage">' . ($course['test_percentage'] ?? 0) . '%</span></div>';
             $html .= '<div class="tracking-tool-progress-container">';
