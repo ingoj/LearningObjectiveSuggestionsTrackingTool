@@ -309,6 +309,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     {
         $html = '';
         foreach ($learningObjectiveCourses as $k => $course) {
+            $html .= '<div class="percent-line" style="width: ' . ($course['test_required_percentage'] ?? '') . '%;">';
+            $html .= '<div class="percent-line-percent"><span>' . $course['test_required_percentage'] . '</span></div>';
+            $html .= '<div class="line"><div></div></div>';
+            $html .= '</div>';
             $html .= '<div class="accordion-content">' . $course['title'] . '<span class="percentage">' . ($course['test_percentage'] ?? 0) . '%</span></div>';
             $html .= '<div class="tracking-tool-progress-container">';
 

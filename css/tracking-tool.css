@@ -5,6 +5,30 @@
     padding: 10px;
 }
 
+.container-tracking-tool .tracking-tool-progress-container  {
+
+}
+
+.container-tracking-tool .percent-line-percent  {
+    color: #A9A9AD;
+    height: 20px;
+}
+
+.container-tracking-tool .percent-line span {
+    display: block;
+    float: right;
+}
+
+.container-tracking-tool .percent-line .line  {
+    height: 15px;
+    padding-right: 5px;
+}
+
+.container-tracking-tool .percent-line .line div  {
+    border-right: 2px dashed #A9A9AD;
+    height: 15px;
+}
+
 .container-tracking-tool h2  {
     font-weight: bold;
 }
@@ -101,10 +125,6 @@
     line-height: 30px;
     color: white;
     border-radius: 5px 0 0 5px;
-}
-
-.tracking-tool .accordion-content {
-    margin-top: 10px;
 }
 
 .tracking-tool .accordion-content .percentage  {
