@@ -222,7 +222,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 if ($key === $k) {
                     $completed = 0;
                     foreach($data as $keyCourse => $course) {
-                        if ($course['test_percentage'] >= $course['test_required_percentage']) {
+                        if ($course['test_percentage'] !== null && $course['test_percentage'] >= $course['test_required_percentage']) {
                             $completed ++;
                         }
                     }
@@ -320,7 +320,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '<div class="' . $targetLineClass . '" style="width: ' . ($course['test_required_percentage'] ?? '') . '%;"></div>';
 
             $classProgressBar = 'progress-bar';
-            if ($course['test_percentage'] >= $course['test_required_percentage']) {
+            if ($course['test_percentage'] !== null && $course['test_percentage'] >= $course['test_required_percentage']) {
                 $classProgressBar = 'progress-bar-percentage-completed';
             }
 
