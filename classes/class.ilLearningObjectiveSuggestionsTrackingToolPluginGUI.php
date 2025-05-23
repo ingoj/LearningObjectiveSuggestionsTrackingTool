@@ -245,11 +245,17 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $index = 1;
         $maxWeight = 0;
-        foreach ($learningObjectives as $key => $learningObjective) {
-            if ($index === 1) {
-                $maxWeight = $learningObjective['score'];
-            }
+        $minWeight = 0;
 
+
+        $scores = array_column($learningObjectives, 'score');
+
+        if (!empty($scores)) {
+            $maxScore = max($scores);
+            $minScore = min($scores);
+        }
+
+        foreach ($learningObjectives as $key => $learningObjective) {
             $classStatusCourses = 'completed';
             if ($learningObjective['count_completed_courses'] < count($learningObjective['courses'])) {
                 $classStatusCourses = 'not-completed';
@@ -264,7 +270,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $courseLink = $this->getCourseLink();
 
             $countWeightSymbols = 3;
-            if ($learningObjective['score'] < $maxWeight) {
+            if (!empty($maxScore) && $learningObjective['score'] === $maxScore) {
+                $countWeightSymbols = 3;
+            } else if (!empty($minScore) && $learningObjective['score'] === $minScore) {
+                $countWeightSymbols = 1;
+            } else {
                 $countWeightSymbols = 2;
             }
 
@@ -273,7 +283,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert.svg" class="icon-weight">';
             }
 
-            if ($learningObjective['score'] < $maxWeight) {
+            if ($countWeightSymbols === 1) {
+                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
+                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
+            } else if ($countWeightSymbols === 2) {
+                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
+            }
+
+            if ($learningObjective['score'] ===  $minWeight) {
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
             }
 
