@@ -258,7 +258,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $checkIcon = 'passed.svg';
             }
 
-            $refId = $this->getCourseRefId($learningObjective['obj_id']);
+
+            $refId = $this->getCourseRefId($key);
             $this->setRefIdAsClassParameter($refId);
             $courseLink = $this->getCourseLink();
 
