@@ -313,9 +313,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $html = '';
         foreach ($learningObjectiveCourses as $k => $course) {
 
-            if ($k === count($learningObjectiveCourses) - 1) {
-                dd($course['test_required_percentage']);
-            }
+            dd($learningObjectiveCourses);
 
 
             $html .= '<div class="percent-line" style="width: ' . ($course['test_required_percentage'] ?? 0) . '%;">';
