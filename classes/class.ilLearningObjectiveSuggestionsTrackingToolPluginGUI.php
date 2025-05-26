@@ -134,12 +134,29 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $finalTestsStates = ilLearnObjectFinalTestStates::getData([$userId]);
         $learningObjectives = [];
 
+        $learnObjectSuggestResults = ilLearnObjectSuggResults::getData([$userId]);
+
+
+        $requiredPercentages = [];
+        foreach ($finalTestsStates as $key => $finalTestState) {
+            foreach ($finalTestState as $k => $value) {
+                $masterCrsId = $value[0]->getLocftestMasterCrsId();
+                $requiredPercentages[$masterCrsId] = $learnObjectSuggestResults[$userId]->getAveragePercentage(ilParticipationCertificateConfig::getConfig('calculation_type_processing_state_suggested_objectives', $masterCrsId));
+            }
+        }
+
         if (count($finalTestsStates)) {
             $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$userId]);
         }
 
         $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
-        $learningObjectives = $this->storeCoursesInLearningObjectives($learningObjectives, $trackingToolData);
+
+        $learningObjectives = $this->storeCoursesInLearningObjectives(
+            $learningObjectives,
+            $trackingToolData,
+            $requiredPercentages
+        );
+
         $this->buildAccordionHtml($learningObjectives, $userId);
 
         return $this->tpl->get();
@@ -212,25 +229,33 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     /**
      * @param array $learningObjectives
      * @param array $trackingToolData
+     * @param array $requiredPercentages
      * @return array
      */
-    private function storeCoursesInLearningObjectives(array $learningObjectives, array $trackingToolData): array
+    private function storeCoursesInLearningObjectives(
+        array $learningObjectives,
+        array $trackingToolData,
+        array $requiredPercentages
+    ): array
     {
         foreach($learningObjectives as $key => $learningObjective) {
             foreach($trackingToolData as $k => $data) {
 
                 if ($key === $k) {
                     $completed = 0;
-                    foreach($data as $keyCourse => $course) {
+                    foreach($data as $course) {
                         if ($course['test_percentage'] !== null && $course['test_percentage'] >= $course['test_required_percentage']) {
                             $completed ++;
                         }
                     }
+
+                    $learningObjectives[$key]['required_percentage'] = $requiredPercentages[$learningObjective['obj_id']];
                     $learningObjectives[$key]['courses'] = $data;
                     $learningObjectives[$key]['count_completed_courses'] = $completed;
                 }
             }
         }
+
         return $learningObjectives;
     }
 
@@ -243,12 +268,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     private function buildAccordionHtml(array $learningObjectives, int $userId): void
     {
         $html = '<div class="tracking-tool">';
-
         $index = 1;
-        $maxWeight = 0;
-        $minWeight = 0;
-
-
         $scores = array_column($learningObjectives, 'score');
 
         if (!empty($scores)) {
@@ -264,7 +284,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             } else  {
                 $checkIcon = 'passed.svg';
             }
-
 
             $refId = $this->getCourseRefId($key);
             $this->setRefIdAsClassParameter($refId);
@@ -306,10 +325,32 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '</div>';
             $html .= '</div>';
 
+            $html .= '<div class="container-percent-line">';
+            $html .= '<div class="percent-line" style="width: ' . ($learningObjective['required_percentage'] ?? 0) . '%;">';
+            $html .= '<div class="percent-line-percent"><span>' . $learningObjective['required_percentage'] . '</span></div>';
+            $html .= '<div class="line">';
+            if ($learningObjective['required_percentage'] != null) {
+                $html .= '<div></div>';
+            }
+            $html .= '</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+
             $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $key .'-'. $userId . '">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '</div>';
-            $html .= $this->buildAccordionDropdownHtml($learningObjective['courses']);
+            $html .= $this->buildAccordionDropdownHtml($learningObjective['courses'], $learningObjective['required_percentage']);
+
+            $html .= '<div class="percent-line" style="width: ' . ($learningObjective['required_percentage'] ?? 0) . '%;">';
+            $html .= '<div class="percent-line-percent"><span></span></div>';
+            $html .= '<div class="line">';
+            if ($learningObjective['required_percentage'] != null) {
+                $html .= '<div></div>';
+            }
+            $html .= '</div>';
+            $html .= '</div>';
+
+
             $html .= '</div>';
 
             $index++;
@@ -319,33 +360,33 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param array $learningObjectiveCourses
+     * @param array    $learningObjectiveCourses
+     * @param int|null $requiredPercentage
      * @return string
      */
-    private function buildAccordionDropdownHtml(array $learningObjectiveCourses): string
-    {
+    private function buildAccordionDropdownHtml(
+        array $learningObjectiveCourses,
+        ?int $requiredPercentage = null
+    ): string {
         $html = '';
         foreach ($learningObjectiveCourses as $k => $course) {
-            $html .= '<div class="percent-line" style="width: ' . ($course['test_required_percentage'] ?? 0) . '%;">';
-            $html .= '<div class="percent-line-percent"><span>' . $course['test_required_percentage'] . '</span></div>';
-            $html .= '<div class="line">';
-            if ($course['test_required_percentage'] != null) {
-                $html .= '<div></div>';
-            }
-            $html .= '</div>';
-            $html .= '</div>';
             $html .= '<div class="accordion-content">' . $course['title'] . '<span class="percentage">' . ($course['test_percentage'] ?? 0) . '%</span></div>';
             $html .= '<div class="tracking-tool-progress-container">';
 
             $targetLineClass = 'target-line';
 
-            if ($course['test_percentage'] >= $course['test_required_percentage']) {
+            if ($course['test_percentage'] >= $requiredPercentage) {
                 $targetLineClass .= '-reached';
             }
-            $html .= '<div class="' . $targetLineClass . '" style="width: ' . ($course['test_required_percentage'] ?? '') . '%;"></div>';
+
+            if ($requiredPercentage > 0) {
+                $html .= '<div class="' . $targetLineClass . '" style="width: ' . $requiredPercentage . '%;"></div>';
+            } else {
+                $html .= '<div class="' . $targetLineClass . '"></div>';
+            }
 
             $classProgressBar = 'progress-bar';
-            if ($course['test_percentage'] !== null && $course['test_percentage'] >= $course['test_required_percentage']) {
+            if ($course['test_percentage'] !== null && $course['test_percentage'] >= $requiredPercentage) {
                 $classProgressBar = 'progress-bar-percentage-completed';
             }
 

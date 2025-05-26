@@ -6,10 +6,10 @@
     var accordionButtonDisplay = 'none',
         accordionButtonAction = 'expand';
 
-    if (localStorage.getItem(accordionButton.parentElement.nextElementSibling.id) === null) {
-      localStorage.setItem(accordionButton.parentElement.nextElementSibling.id, 'true');
+    if (localStorage.getItem(accordionButton.parentElement.nextElementSibling.nextElementSibling.id) === null) {
+      localStorage.setItem(accordionButton.parentElement.nextElementSibling.nextElementSibling.id, 'true');
       accordionButtonDisplay = 'block';
-    } else if (localStorage.getItem(accordionButton.parentElement.nextElementSibling.id) === 'true') {
+    } else if (localStorage.getItem(accordionButton.parentElement.nextElementSibling.nextElementSibling.id) === 'true') {
       accordionButtonDisplay = 'block';
       accordionButtonAction = 'collapse';
       newIconSrc = accordionButton.getAttribute('src').replace('tree_col', 'tree_exp');
@@ -18,7 +18,7 @@
       newIconSrc = accordionButton.getAttribute('src').replace('tree_exp', 'tree_col');
       accordionButton.setAttribute('src', newIconSrc);
     }
-    accordionButton.parentElement.nextElementSibling.style.display = accordionButtonDisplay;
+    accordionButton.parentElement.nextElementSibling.nextElementSibling.style.display = accordionButtonDisplay;
     accordionButton.setAttribute('data-action', accordionButtonAction);
   }
 
@@ -27,7 +27,7 @@
     initialLoad(accordionButtons[i]);
 
     accordionButtons[i].addEventListener('click', function () {
-      var panel = this.parentElement.nextElementSibling;
+      var panel = this.parentElement.nextElementSibling.nextElementSibling;
 
       this.classList.toggle('tracking-tool-active');
       let action = this.getAttribute('data-action');

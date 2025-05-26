@@ -37,7 +37,7 @@
     background-color: #E3E8EE;
     border: none;
     color: #516583;
-    margin-top: 30px;
+    margin-top: 50px;
     outline: none;
     padding: 18px;
     text-align: left;
@@ -45,8 +45,13 @@
     width: 100%;
 }
 
+.tracking-tool .tracking-tool-accordion-item:nth-child(1) {
+    margin-top: 30px;
+}
+
 .tracking-tool .accordion-content  {
     color: #516583;
+    padding-top: 10px;
 }
 
 .tracking-tool .tracking-tool-tree-icon  {
@@ -194,4 +199,8 @@
     float: right;
     height: 20px;
     width: 20px;
+}
+
+.tracking-tool .container-percent-line  {
+    margin-top: 20px;
 }
