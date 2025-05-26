@@ -204,3 +204,119 @@
 .tracking-tool .container-percent-line  {
     margin-top: 20px;
 }
+
+.h2-tracking-tool  {
+    width: auto;
+}
+
+.tracking-tool.tooltip {
+    border: 2px solid #516583;
+    border-bottom: 1px dotted black;
+    border-radius: 50%;
+    color: #516583;
+    display: inline-block;
+    height: 20px;
+    font-size: 14px;
+    position: relative;
+    text-align: center;
+    width: 20px;
+}
+
+.tracking-tool.tooltip .tracking-tool.tooltiptext {
+    border: 1px solid #516583;
+    border-radius: 6px;
+    background-color: #E3E8EE;
+    color: #516583;
+    padding: 20px 10px;
+    position: absolute;
+    text-align: center;
+    visibility: hidden;
+    width: 250px;
+    z-index: 1;
+}
+
+.tracking-tool.tooltip:hover .tracking-tool.tooltiptext {
+    padding: 20px;
+    visibility: visible;
+}
+
+.tracking-tool.tooltiptext > span {
+    display: block;
+    text-align: left;
+}
+
+.tracking-tool.tooltiptext span {
+    font-size: 12px;
+}
+
+.tracking-tool.tooltiptext > span:nth-child(1) {
+    padding-left: 24px;
+}
+
+.tracking-tool.tooltiptext > span:nth-child(3) {
+    padding-left: 24px;
+}
+
+.tracking-tool.tooltiptext > span:nth-child(5) {
+    padding-left: 24px;
+}
+
+.tracking-tool.tooltiptext > span:nth-child(9) {
+    padding-left: 24px;
+}
+
+.tracking-tool.tooltiptext span.container-img {
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.tracking-tool.tooltiptext span.container-percent {
+    background-color: #97D312;
+    -webkit-border-radius: 2px;
+    -moz-border-radius: 2px;
+    border-radius: 2px;
+    color: #FFFFFF;
+    font-weight: normal;
+    font-size: 10px;
+    margin-right: 5px;
+    padding: 2px;
+}
+
+.tracking-tool.tooltiptext span.container-img-passed {
+    background-color: #63B563;
+    -webkit-border-radius: 2px;
+    -moz-border-radius: 2px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.tracking-tool.tooltiptext span.container-img img {
+    height: 16px;
+    width: 16px;
+}
+
+.tracking-tool.tooltiptext span.container-img-passed img {
+    height: 14px;
+    width: 14px;
+}
+
+.tracking-tool.tooltiptext img {
+    display: inline-block;
+    float: left;
+}
+
+.tracking-tool.tooltiptext .legend {
+    display: inline-block;
+    font-size: 14px;
+    padding-left: 20px;
+    text-align: left;
+}
+
+.tracking-tool.tooltiptext .font-bold  {
+    font-weight: bold;
+}
+
+.tracking-tool.tooltiptext .font-normal  {
+    font-weight: normal;
+}
