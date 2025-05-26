@@ -180,10 +180,7 @@
     border-top-right-radius: 2px;
     -webkit-border-bottom-right-radius: 2px;
     border-bottom-right-radius: 2px;
-    padding-bottom: 4px;
-    padding-top: 1px;
-    padding-left: 2px;
-    padding-right: 2px;
+    padding: 1px 2px 4px;
 }
 
 .tracking-tool .container-weight  {
@@ -227,11 +224,10 @@
     border-radius: 6px;
     background-color: #E3E8EE;
     color: #516583;
-    padding: 20px 10px;
     position: absolute;
     text-align: center;
     visibility: hidden;
-    width: 250px;
+    width: 280px;
     z-index: 1;
 }
 

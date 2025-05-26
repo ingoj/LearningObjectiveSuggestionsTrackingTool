@@ -451,6 +451,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('DESCRIPTION', $this->pl->txt('description'));
         $this->tpl->setVariable('LEARNING_SUGGESTION', $this->pl->txt('learning_suggestion') . ' <span class="lets-get-started">' . $this->pl->txt('lets_get_started') . '</span>');
         $this->tpl->setVariable('HTML', $html);
+
+        $this->tpl->setVariable('LEGENDS_TEXT_LEGENDS', $this->pl->txt('legends_text_legends'));
+        $this->tpl->setVariable('LEGENDS_TEXT_SOS', $this->pl->txt('legends_text_sos'));
+        $this->tpl->setVariable('LEGENDS_TEXT_SOS_2', $this->pl->txt('legends_text_sos_2'));
+        $this->tpl->setVariable('LEGENDS_TEXT_LAST_VISIT', $this->pl->txt('legends_text_last_visit'));
+        $this->tpl->setVariable('LEGENDS_TEXT_LAST_VISIT_2', $this->pl->txt('legends_text_last_visit_2'));
+        $this->tpl->setVariable('LEGENDS_TEXT_PERCENT', $this->pl->txt('legends_text_percent'));
+        $this->tpl->setVariable('LEGENDS_TEXT_PERCENT_2', $this->pl->txt('legends_text_percent_2'));
+        $this->tpl->setVariable('LEGENDS_TEXT_PERCENT_3', $this->pl->txt('legends_text_percent_3'));
+        $this->tpl->setVariable('LEGENDS_TEXT_COMPLETED', $this->pl->txt('legends_text_completed'));
+        $this->tpl->setVariable('LEGENDS_TEXT_COMPLETED_2', $this->pl->txt('legends_text_completed_2'));
+
+
     }
 
     /**

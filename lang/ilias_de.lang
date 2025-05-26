@@ -4,3 +4,13 @@ description#:#Meine Kurse - basierend auf meiner individuellen Lernempfelung.
 learning_suggestion#:#Lernempfelung:
 lets_get_started#:#los geht's
 cmd_insert#:#Tracking-Tool einfügen
+legends_text_legends#:#Legende - Das bedeutet die Icons:
+legends_text_sos#:#Achtung:
+legends_text_sos_2#:#Je mehr Icons, desto stärker die Empfehlung, diesen Kurs weiter zu bearbeiten.
+legends_text_last_visit#:#Letzter Besuch:
+legends_text_last_visit_2#:#Markiert den zuletzt geöffneten Kurs.
+legends_text_percent#:#Prozentzahl:
+legends_text_percent_2#:#Gesamtleistung im Kurs oder Test.
+legends_text_percent_3#:#4 von 4
+legends_text_completed#:#Abgeschlossen:
+legends_text_completed_2#:#Der Kurs wurde vollständig bearbeitet!
