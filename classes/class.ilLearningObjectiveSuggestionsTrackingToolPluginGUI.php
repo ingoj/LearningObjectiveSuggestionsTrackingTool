@@ -300,8 +300,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $htmlIconsAlert = '';
             for ($i = 1; $i <= $countWeightSymbols; $i++) {
-                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert.svg" class="icon-weight">';
+
+                if ($learningObjective['count_completed_courses'] === count($learningObjective['courses'])) {
+                    $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-completed.svg" class="icon-weight">';
+                } else {
+                    $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert.svg" class="icon-weight">';
+                }
             }
+
 
             if ($countWeightSymbols === 1) {
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
