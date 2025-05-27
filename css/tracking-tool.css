@@ -155,8 +155,8 @@
 }
 
 .tracking-tool .tooltiptext .last-visited.triangle  {
-    border-bottom: 15px solid transparent;
-    border-right: 15px solid #3c5470;
+    border-bottom: 12px solid transparent;
+    border-right: 12px solid #3c5470;
     height: 0;
     margin-right: 0;
     margin-top: 0;
@@ -227,19 +227,24 @@
 }
 
 .h2-tracking-tool  {
-    width: auto;
+    position: relative;
+    width: fit-content;
 }
 
 .tracking-tool.tooltip {
-    border: 2px solid #516583;
-    border-bottom: 1px dotted black;
     border-radius: 50%;
     color: #516583;
-    display: inline-block;
-    height: 20px;
+    display: block;
     font-size: 14px;
-    position: relative;
-    text-align: center;
+    height: 20px;
+    position: absolute;
+    right: -30px;
+    top: -5px;
+    width: 20px;
+}
+
+.tracking-tool.tooltip > img {
+    height: 20px;
     width: 20px;
 }
 
@@ -290,6 +295,10 @@
     margin-right: 5px;
 }
 
+.tracking-tool.tooltiptext .legend-text  {
+    margin-left: 7px;
+}
+
 .tracking-tool.tooltiptext span.container-percent {
     background-color: #97D312;
     -webkit-border-radius: 2px;
@@ -312,8 +321,8 @@
 }
 
 .tracking-tool.tooltiptext span.container-img img {
-    height: 16px;
-    width: 16px;
+    height: 18px;
+    width: 18px;
 }
 
 .tracking-tool.tooltiptext span.container-img-passed img {
@@ -331,6 +340,11 @@
     font-size: 14px;
     padding-left: 20px;
     text-align: left;
+}
+
+.tracking-tool.tooltiptext .icon-legend  {
+    height: 20px;
+    width: 20px;
 }
 
 .tracking-tool.tooltiptext .font-bold  {
