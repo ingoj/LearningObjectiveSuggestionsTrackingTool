@@ -144,6 +144,25 @@
     float: right;
 }
 
+.tracking-tool .last-visited.triangle  {
+    border-bottom: 20px solid transparent;
+    border-right: 20px solid #3c5470;
+    float: right;
+    height: 0;
+    margin-right: -17px;
+    margin-top: -18px;
+    width: 0;
+}
+
+.tracking-tool .tooltiptext .last-visited.triangle  {
+    border-bottom: 15px solid transparent;
+    border-right: 15px solid #3c5470;
+    height: 0;
+    margin-right: 0;
+    margin-top: 0;
+    width: 0;
+}
+
 .tracking-tool .completed-courses  {
     background-color: #97D312;
     -webkit-border-top-left-radius: 2px;

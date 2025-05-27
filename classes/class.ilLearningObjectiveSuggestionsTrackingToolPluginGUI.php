@@ -267,6 +267,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function buildAccordionHtml(array $learningObjectives, int $userId): void
     {
+        global $DIC;
+
         $html = '<div class="tracking-tool">';
         $index = 1;
         $scores = array_column($learningObjectives, 'score');
@@ -276,7 +278,26 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $minScore = min($scores);
         }
 
-        foreach ($learningObjectives as $key => $learningObjective) {
+        $navigationHistory = $DIC['ilNavigationHistory']->getItems();
+
+        $lastVisitedObjId = null;
+        foreach ($navigationHistory as $historyItem) {
+            $historyItemObjectId = ilObject::_lookupObjectId($historyItem['ref_id']);
+            foreach ($learningObjectives as $key => $learningObjective) {
+                if ($historyItem['type'] === 'crs' &&
+                    $historyItemObjectId == $key
+                ) {
+                    $lastVisitedObjId = $historyItemObjectId;
+                    break;
+                }
+            }
+
+            if (!empty($lastVisitedObjId)) {
+                break;
+            }
+        }
+
+        foreach ($learningObjectives as $learningObjectiveObjId => $learningObjective) {
             $classStatusCourses = 'completed';
             if ($learningObjective['count_completed_courses'] < count($learningObjective['courses'])) {
                 $classStatusCourses = 'not-completed';
@@ -285,7 +306,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $checkIcon = 'passed.svg';
             }
 
-            $refId = $this->getCourseRefId($key);
+            $refId = $this->getCourseRefId($learningObjectiveObjId);
             $this->setRefIdAsClassParameter($refId);
             $courseLink = $this->getCourseLink();
 
@@ -308,7 +329,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
             }
 
-
             if ($countWeightSymbols === 1) {
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
@@ -322,9 +342,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '<a href="' . $courseLink . '">' . $learningObjective['txt'] . '</a>';
             $html .= '</span>';
 
+            if ($lastVisitedObjId == $learningObjectiveObjId) {
+                $html .= '<span class="last-visited triangle"></span>';
+            }
+
             $html .= '<span class="icon-check icon-check-' . $classStatusCourses . '">';
             $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/' . $checkIcon . '">';
             $html .= '</span>';
+
             $html .= '<span class="count-courses ' . $classStatusCourses . '-courses">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>';
             $html .= '<div class="container-weight">';
             $html .= '<span class="weight">' . $htmlIconsAlert . '</span>';
@@ -340,7 +365,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '</div>';
             $html .= '</div>';
 
-            $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $key .'-'. $userId . '">';
+            $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $learningObjectiveObjId .'-'. $userId . '">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '</div>';
             $html .= $this->buildAccordionDropdownHtml($learningObjective['courses'], $learningObjective['required_percentage']);
