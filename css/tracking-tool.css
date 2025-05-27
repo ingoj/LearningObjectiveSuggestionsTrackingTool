@@ -5,6 +5,11 @@
     padding: 10px;
 }
 
+.container-tracking-tool .container-percent-line  {
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
 .container-tracking-tool .percent-line-percent  {
     color: #A9A9AD;
     height: 20px;
@@ -13,11 +18,11 @@
 .container-tracking-tool .percent-line span {
     display: block;
     float: right;
+    margin-right: -5px;
 }
 
 .container-tracking-tool .percent-line .line  {
     height: 15px;
-    padding-right: 5px;
 }
 
 .container-tracking-tool .percent-line .line div  {
