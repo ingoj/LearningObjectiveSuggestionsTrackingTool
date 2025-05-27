@@ -327,11 +327,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $html .= '<div class="container-percent-line">';
             $html .= '<div class="percent-line" style="width: ' . ($learningObjective['required_percentage'] ?? 0) . '%;">';
-            $html .= '<div class="percent-line-percent"><span>' . $learningObjective['required_percentage'] . '</span></div>';
+            $html .= '<div class="percent-line-percent"><span>' . ($learningObjective['required_percentage'] ?? 0) . '%</span></div>';
             $html .= '<div class="line">';
-            if ($learningObjective['required_percentage'] != null) {
-                $html .= '<div></div>';
-            }
+            $html .= '<div></div>';
             $html .= '</div>';
             $html .= '</div>';
             $html .= '</div>';
@@ -344,9 +342,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '<div class="percent-line" style="width: ' . ($learningObjective['required_percentage'] ?? 0) . '%;">';
             $html .= '<div class="percent-line-percent"><span></span></div>';
             $html .= '<div class="line">';
-            if ($learningObjective['required_percentage'] != null) {
-                $html .= '<div></div>';
-            }
+            $html .= '<div></div>';
             $html .= '</div>';
             $html .= '</div>';
 
