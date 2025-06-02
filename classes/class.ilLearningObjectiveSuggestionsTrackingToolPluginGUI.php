@@ -141,7 +141,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         foreach ($finalTestsStates as $key => $finalTestState) {
             foreach ($finalTestState as $k => $value) {
                 $masterCrsId = $value[0]->getLocftestMasterCrsId();
-                $requiredPercentages[$masterCrsId] = $learnObjectSuggestResults[$userId]->getAveragePercentage(ilParticipationCertificateConfig::getConfig('calculation_type_processing_state_suggested_objectives', $masterCrsId));
+                $requiredPercentages[$masterCrsId] = 60;
+                //$requiredPercentages[$masterCrsId] = $learnObjectSuggestResults[$userId]->getAveragePercentage(ilParticipationCertificateConfig::getConfig('calculation_type_processing_state_suggested_objectives', $masterCrsId));
             }
         }
 
@@ -244,7 +245,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 if ($key === $k) {
                     $completed = 0;
                     foreach ($data as $course) {
-                        if ($course['test_percentage'] !== null && $course['test_percentage'] >= $course['test_required_percentage']) {
+                        if ($course['test_percentage'] !== null && $course['test_percentage'] >= '60') {
                             $completed++;
                         }
                     }
