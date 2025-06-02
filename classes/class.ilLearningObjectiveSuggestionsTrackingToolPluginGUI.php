@@ -337,7 +337,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
 
             $html .= '<div class="tracking-tool-accordion-item">';
-            if (!$learningObjective['suggested']) {
+            if ($learningObjective['suggested']) {
                 $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon tracking-tool-active" data-action="collapse">';
             } else {
                 $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
