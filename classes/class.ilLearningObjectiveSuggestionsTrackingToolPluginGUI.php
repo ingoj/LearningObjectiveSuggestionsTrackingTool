@@ -219,6 +219,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                         'default' => true,
                         'score' => $sort_arr['score'],
                         'width' => 'auto',
+                        'suggested' => $sort_arr['suggested'],
                     );
                 }
             }
@@ -309,12 +310,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $this->setRefIdAsClassParameter($refId);
             $courseLink = $this->getCourseLink();
 
-            $countWeightSymbols = 3;
-            if (!empty($maxScore) && $learningObjective['score'] === $maxScore) {
+            $countWeightSymbols = 0;
+            if (!empty($maxScore) && $learningObjective['suggested'] && $learningObjective['score'] === $maxScore) {
                 $countWeightSymbols = 3;
-            } elseif (!empty($minScore) && $learningObjective['score'] === $minScore) {
+            } elseif (!empty($minScore) && $learningObjective['suggested'] && $learningObjective['score'] === $minScore) {
                 $countWeightSymbols = 1;
-            } else {
+            } elseif (!empty($maxScore) && !empty($minScore) && $learningObjective['suggested'] && $learningObjective['score'] < $maxScore && $learningObjective['score'] > $minScore) {
                 $countWeightSymbols = 2;
             }
 
@@ -336,7 +337,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
 
             $html .= '<div class="tracking-tool-accordion-item">';
-            $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="collapse">';
+            if (!$learningObjective['suggested']) {
+                $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon tracking-tool-active" data-action="collapse">';
+            } else {
+                $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
+            }
             $html .= '<span class="learning-objective-title">';
             $html .= '<a href="' . $courseLink . '">' . $learningObjective['txt'] . '</a>';
             $html .= '</span>';
@@ -501,7 +506,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     {
         $scores = NewLearningObjectiveScores::getData($userId);
         $weights = getFineWeights::getData();
-
+        $suggs = getLearnSuggs::getData($userId);
         $sorting = [];
         foreach ($scores as $score) {
 
@@ -512,13 +517,23 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             if (key_exists('weight_fine_' . $score->getObjectiveId(), $weights)) {
                 $fine = $weights['weight_fine_' . $score->getObjectiveId()];
             }
-
+            $suggested = false;
+            foreach ($suggs as $sugg) {
+                /**
+                 * @var getLearnSugg $sugg
+                 */
+                if ($score->getObjectiveId() == $sugg->getSuggObjectiveId()) {
+                    $suggested = true;
+                    break;
+                }
+            }
             $sorting[$score->getObjectiveId()] = [
                 'title' => $score->getTitle(),
                 'score' => $score->getScore(),
                 'obj_id' => $score->getCourseObjId(),
                 'objective_id' => $score->getObjectiveId(),
-                'weight' => $fine
+                'weight' => $fine,
+                'suggested' => $suggested
             ];
         }
         return $sorting;
