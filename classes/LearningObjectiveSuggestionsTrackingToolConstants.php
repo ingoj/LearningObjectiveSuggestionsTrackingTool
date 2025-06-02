@@ -2,7 +2,7 @@
 
 class LearningObjectiveSuggestionsTrackingToolConstants
 {
-    const PLUGIN_ID = 'dhbwtrcktl';
+    public const PLUGIN_ID = 'dhbwtrcktl';
 
-    const PLUGIN_NAME = 'LearningObjectiveSuggestionsTrackingTool';
+    public const PLUGIN_NAME = 'LearningObjectiveSuggestionsTrackingTool';
 }

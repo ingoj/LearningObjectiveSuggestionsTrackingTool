@@ -95,7 +95,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     /**
      * Cancel button - cancel editing
      */
-    function cancel(): void
+    public function cancel(): void
     {
         $this->returnToParent();
     }
@@ -118,7 +118,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @throws ilTemplateException
      * @throws ilCtrlException
      */
-    function getElementHTML($a_mode, array $a_properties, $plugin_version): string
+    public function getElementHTML($a_mode, array $a_properties, $plugin_version): string
     {
         global $DIC;
 
@@ -173,7 +173,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $processed = [];
 
         foreach ($finalTestsStates[$userId] as $finalTests) {
-            foreach($finalTests as $key => $value) {
+            foreach ($finalTests as $key => $value) {
                 if ($value->getLocftestCrsObjId()) {
                     // check if data already exists
                     $crsObjId = $value->getLocftestCrsObjId();
@@ -236,16 +236,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         array $learningObjectives,
         array $trackingToolData,
         array $requiredPercentages
-    ): array
-    {
-        foreach($learningObjectives as $key => $learningObjective) {
-            foreach($trackingToolData as $k => $data) {
+    ): array {
+        foreach ($learningObjectives as $key => $learningObjective) {
+            foreach ($trackingToolData as $k => $data) {
 
                 if ($key === $k) {
                     $completed = 0;
-                    foreach($data as $course) {
+                    foreach ($data as $course) {
                         if ($course['test_percentage'] !== null && $course['test_percentage'] >= $course['test_required_percentage']) {
-                            $completed ++;
+                            $completed++;
                         }
                     }
 
@@ -302,7 +301,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             if ($learningObjective['count_completed_courses'] < count($learningObjective['courses'])) {
                 $classStatusCourses = 'not-completed';
                 $checkIcon = 'not-completed.svg';
-            } else  {
+            } else {
                 $checkIcon = 'passed.svg';
             }
 
@@ -313,7 +312,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $countWeightSymbols = 3;
             if (!empty($maxScore) && $learningObjective['score'] === $maxScore) {
                 $countWeightSymbols = 3;
-            } else if (!empty($minScore) && $learningObjective['score'] === $minScore) {
+            } elseif (!empty($minScore) && $learningObjective['score'] === $minScore) {
                 $countWeightSymbols = 1;
             } else {
                 $countWeightSymbols = 2;
@@ -332,7 +331,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             if ($countWeightSymbols === 1) {
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
-            } else if ($countWeightSymbols === 2) {
+            } elseif ($countWeightSymbols === 2) {
                 $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
             }
 
@@ -365,7 +364,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '</div>';
             $html .= '</div>';
 
-            $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $learningObjectiveObjId .'-'. $userId . '">';
+            $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $learningObjectiveObjId . '-' . $userId . '">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '</div>';
             $html .= $this->buildAccordionDropdownHtml($learningObjective['courses'], $learningObjective['required_percentage']);
@@ -452,7 +451,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     {
         $this->ctrl->setParameterByClass(
             'ilrepositorygui',
-            'ref_id', $refId
+            'ref_id',
+            $refId
         );
     }
 
@@ -509,8 +509,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             /**
              * @var NewLearningObjectiveScore $score
              */
-            if (key_exists('weight_fine_'.$score->getObjectiveId(),$weights)) {
-                $fine = $weights['weight_fine_'.$score->getObjectiveId()];
+            if (key_exists('weight_fine_' . $score->getObjectiveId(), $weights)) {
+                $fine = $weights['weight_fine_' . $score->getObjectiveId()];
             }
 
             $sorting[$score->getObjectiveId()] = [
@@ -524,4 +524,3 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         return $sorting;
     }
 }
-
