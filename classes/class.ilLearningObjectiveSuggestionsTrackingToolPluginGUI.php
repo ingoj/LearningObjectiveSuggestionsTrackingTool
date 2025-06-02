@@ -272,12 +272,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $html = '<div class="tracking-tool">';
         $index = 1;
-        $scores = array_column($learningObjectives, 'score');
-
-        if (!empty($scores)) {
-            $maxScore = max($scores);
-            $minScore = min($scores);
-        }
+        $suggestedKeys = array_keys(array_filter($learningObjectives, function ($target) {
+            return !empty($target['suggested']) && $target['suggested'] === true;
+        }));
+        $totalSuggestions = count($suggestedKeys);
 
         $navigationHistory = $DIC['ilNavigationHistory']->getItems();
 
@@ -311,13 +309,16 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $this->setRefIdAsClassParameter($refId);
             $courseLink = $this->getCourseLink();
 
-            $countWeightSymbols = 0;
-            if (!empty($maxScore) && $learningObjective['suggested'] && $learningObjective['score'] === $maxScore) {
-                $countWeightSymbols = 3;
-            } elseif (!empty($minScore) && $learningObjective['suggested'] && $learningObjective['score'] === $minScore) {
-                $countWeightSymbols = 1;
-            } elseif (!empty($maxScore) && !empty($minScore) && $learningObjective['suggested'] && $learningObjective['score'] < $maxScore && $learningObjective['score'] > $minScore) {
-                $countWeightSymbols = 2;
+            if (($suggestedIndex = array_search($learningObjectiveObjId, $suggestedKeys)) !== false) {
+                if ($suggestedIndex === 0) {
+                    $countWeightSymbols = 3;
+                } elseif ($suggestedIndex === $totalSuggestions - 1) {
+                    $countWeightSymbols = 1;
+                } else {
+                    $countWeightSymbols = 2;
+                }
+            } else {
+                $countWeightSymbols = 0;
             }
 
             $htmlIconsAlert = '';
