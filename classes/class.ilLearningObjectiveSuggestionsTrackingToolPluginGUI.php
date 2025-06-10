@@ -1,7 +1,12 @@
 <?php
 
+use ILIAS\UI\Factory;
+use ILIAS\DI\Container;
+use Psr\Http\Message\ServerRequestInterface;
+
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
+ * @ilCtrl_IsCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilObjComponentSettingsGUI
  */
 class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponentPluginGUI
 {
@@ -11,14 +16,27 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     private ilPlugin $pl;
 
+    private \ILIAS\DI\Container $dic;
+
+    private \ILIAS\UI\Factory $factory;
+
+    private \ILIAS\UI\Renderer $renderer;
+
+    private int $tracking_tool_counter_id = 0;
+
+
     public function __construct()
     {
         global $DIC;
 
         parent::__construct();
+        $this->dic = $DIC;
         $this->ctrl = $DIC->ctrl();
         $this->pl = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
         $this->lng = $DIC->language();
+        $this->factory = $DIC->ui()->factory();
+        $this->renderer = $DIC->ui()->renderer();
+
     }
 
     /**
@@ -36,7 +54,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             'create',
             'update',
             'edit',
-            'cancel'
+            'cancel',
+            'saveConfig'
         ];
         if (in_array($cmd, $commands)) {
             $this->$cmd();
@@ -62,7 +81,74 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function edit(): void
     {
+        global $DIC;
+
+        $form = $this->buildConfigForm();
+        $DIC->ui()->mainTemplate()->setContent($this->renderer->render($form));
     }
+
+    /**
+     * @throws ilCtrlException
+     * @throws ilFormException
+     */
+    public function buildConfigForm()
+    {
+        /*$this->tpl->setTitle($this->plugin->txt('page_title'));
+        $this->tpl->setDescription('');*/
+
+        $properties = $this->getProperties();
+
+        dd($properties);
+
+        $field = $this->factory->input()->field();
+        $input_ref_id = $field->text($this->plugin->txt('ref_id'));
+
+        $form = $this->factory->input()->container()->form()->standard(
+            $this->dic->ctrl()->getFormAction($this, 'saveConfig'),
+            [
+                'ref_id' => $input_ref_id
+            ]
+        );
+
+        return $form;
+
+    }
+
+    /**
+     * @return void
+     */
+    private function saveConfig(): void
+    {
+        $tpl = $this->dic->ui()->mainTemplate();
+        $form = $this->buildConfigForm();
+        $formRequest = $form->withRequest($this->dic->http()->request());
+
+        $refId = (int) $formRequest->getData()['ref_id'];
+
+        if ($form->getError()) {
+            $this->tpl->setOnScreenMessage('failure', $this->plugin->txt('error'));
+            $this->returnToParent();
+        }
+
+        if ($refId === 0) {
+            $tpl->setOnScreenMessage('failure', $this->plugin->txt('updated_failure'), true);
+            $this->returnToParent();
+        }
+        $properties = $this->getProperties();
+        //CollectionEntity::find($properties['collection_id'])
+
+        if (empty($properties)) {
+            $properties['ref_id'] = $refId;
+        }
+
+        if ($this->updateElement($properties)) {
+            $tpl->setOnScreenMessage('success', $this->plugin->txt('updated_success'), true);
+            $this->returnToParent();
+        }
+
+
+    }
+
 
     /**
      * @return void
@@ -125,6 +211,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         if ($DIC->user()->isAnonymous()) {
             return '';
         }
+
+        $this->tracking_tool_counter_id += 1;
 
         $pl = $this->getPlugin();
         $this->tpl = $pl->getTemplate('tpl.tracking-tool.html');
@@ -480,6 +568,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function setVariables(string $html): void
     {
+        $id = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance()->getId() . '_tracking_tool_' . $this->tracking_tool_counter_id;
+
+        $this->tpl->setVariable('TRACKING_TOOL_ID', $id);
         $this->tpl->setVariable('TITLE', $this->pl->txt('title'));
         $this->tpl->setVariable('SUBTITLE', $this->pl->txt('subtitle'));
         $this->tpl->setVariable('DESCRIPTION', $this->pl->txt('description'));
@@ -496,8 +587,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('LEGENDS_TEXT_PERCENT_3', $this->pl->txt('legends_text_percent_3'));
         $this->tpl->setVariable('LEGENDS_TEXT_COMPLETED', $this->pl->txt('legends_text_completed'));
         $this->tpl->setVariable('LEGENDS_TEXT_COMPLETED_2', $this->pl->txt('legends_text_completed_2'));
-
-
     }
 
     /**
