@@ -1,12 +1,7 @@
 <?php
 
-use ILIAS\UI\Factory;
-use ILIAS\DI\Container;
-use Psr\Http\Message\ServerRequestInterface;
-
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
- * @ilCtrl_IsCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilObjComponentSettingsGUI
  */
 class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponentPluginGUI
 {
@@ -93,15 +88,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function buildConfigForm()
     {
-        /*$this->tpl->setTitle($this->plugin->txt('page_title'));
-        $this->tpl->setDescription('');*/
-
         $properties = $this->getProperties();
 
-        dd($properties);
-
         $field = $this->factory->input()->field();
-        $input_ref_id = $field->text($this->plugin->txt('ref_id'));
+        $input_ref_id = $field->text($this->plugin->txt('ref_id'))->withValue($properties['ref_id'] ?? '');
 
         $form = $this->factory->input()->container()->form()->standard(
             $this->dic->ctrl()->getFormAction($this, 'saveConfig'),
@@ -116,6 +106,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @return void
+     * @throws ilCtrlException
+     * @throws ilFormException
      */
     private function saveConfig(): void
     {
@@ -135,7 +127,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $this->returnToParent();
         }
         $properties = $this->getProperties();
-        //CollectionEntity::find($properties['collection_id'])
 
         if (empty($properties)) {
             $properties['ref_id'] = $refId;
