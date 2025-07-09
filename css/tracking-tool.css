@@ -6,6 +6,7 @@
 }
 
 .container-tracking-tool .container-percent-line  {
+    display: none;
     padding-left: 18px;
     padding-right: 18px;
 }
@@ -76,10 +77,10 @@
 }
 
 .tracking-tool .tracking-tool-panel {
-    padding: 0 18px;
     background-color: white;
     display: none;
     overflow: hidden;
+    padding: 0 18px;
 }
 
 .tracking-tool .tracking-tool-progress-container {
