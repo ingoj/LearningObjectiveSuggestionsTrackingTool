@@ -10,9 +10,9 @@
     const percentLine = accordionButton.parentElement.nextElementSibling;
 
     if (localStorage.getItem(panel.id) === null) {
-      localStorage.setItem(panel.id, 'true');
-      accordionButtonDisplay = 'block';
-      accordionButtonAction = 'collapse';
+      localStorage.setItem(panel.id, 'false');
+      accordionButtonDisplay = 'none';
+      accordionButtonAction = 'expand';
     } else if (localStorage.getItem(panel.id) === 'true') {
       accordionButtonDisplay = 'block';
       accordionButtonAction = 'collapse';
