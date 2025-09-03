@@ -117,6 +117,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @return string
      * @throws ilTemplateException
      * @throws ilCtrlException
+     * @throws ilSystemStyleException
      */
     public function getElementHTML($a_mode, array $a_properties, $plugin_version): string
     {
@@ -126,8 +127,18 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
-        $pl = $this->getPlugin();
-        $this->tpl = $pl->getTemplate('tpl.tracking-tool.html');
+        $template = $DIC->ui()->mainTemplate();
+        $template->addCss(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/css/tracking-tool.css');
+        $template->addJavaScript(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/js/tracking-tool.js');
+
+        $this->tpl = new ilTemplate(
+            'tpl.tracking-tool.html',
+            true,
+            true,
+            'public/' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY,
+            ilGlobalTemplateInterface::DEFAULT_BLOCK,
+            true
+        );
 
         $userId = $DIC->user()->getId();
         $sorted = $this->sortByScore($userId);
@@ -142,7 +153,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             foreach ($finalTestState as $k => $value) {
                 $masterCrsId = $value[0]->getLocftestMasterCrsId();
                 $requiredPercentages[$masterCrsId] = 60;
-                //$requiredPercentages[$masterCrsId] = $learnObjectSuggestResults[$userId]->getAveragePercentage(ilParticipationCertificateConfig::getConfig('calculation_type_processing_state_suggested_objectives', $masterCrsId));
             }
         }
 
@@ -325,24 +335,24 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             for ($i = 1; $i <= $countWeightSymbols; $i++) {
 
                 if ($learningObjective['count_completed_courses'] === count($learningObjective['courses'])) {
-                    $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-completed.svg" class="icon-weight">';
+                    $htmlIconsAlert .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/alert-completed.svg" class="icon-weight">';
                 } else {
-                    $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert.svg" class="icon-weight">';
+                    $htmlIconsAlert .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/alert.svg" class="icon-weight">';
                 }
             }
 
             if ($countWeightSymbols === 1) {
-                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
-                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
+                $htmlIconsAlert .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/alert-secondary.svg" class="icon-weight">';
+                $htmlIconsAlert .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/alert-secondary.svg" class="icon-weight">';
             } elseif ($countWeightSymbols === 2) {
-                $htmlIconsAlert .= '<img src="' . $this->pl->getDirectory() . '/templates/images/alert-secondary.svg" class="icon-weight">';
+                $htmlIconsAlert .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/alert-secondary.svg" class="icon-weight">';
             }
 
             $html .= '<div class="tracking-tool-accordion-item">';
             if ($learningObjective['suggested']) {
-                $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon tracking-tool-active" data-action="collapse">';
+                $html .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon tracking-tool-active" data-action="collapse">';
             } else {
-                $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
+                $html .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/tree_col.svg" class="tracking-tool-tree-icon" data-action="expand">';
             }
             $html .= '<span class="learning-objective-title">';
             $html .= '<a href="' . $courseLink . '">' . $learningObjective['txt'] . '</a>';
@@ -353,7 +363,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
 
             $html .= '<span class="icon-check icon-check-' . $classStatusCourses . '">';
-            $html .= '<img src="' . $this->pl->getDirectory() . '/templates/images/' . $checkIcon . '">';
+            $html .= '<img src="' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/images/' . $checkIcon . '">';
             $html .= '</span>';
 
             $html .= '<span class="count-courses ' . $classStatusCourses . '-courses">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>';

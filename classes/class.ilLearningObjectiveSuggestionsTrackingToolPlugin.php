@@ -5,6 +5,8 @@
  */
 class ilLearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPlugin
 {
+    public const PLUGIN_DIRECTORY = 'Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool';
+
     /**
      * @param $a_type
      * @return bool
@@ -42,23 +44,5 @@ class ilLearningObjectiveSuggestionsTrackingToolPlugin extends ilPageComponentPl
         /** @var ilComponentFactory $component_factory */
         $component_factory = $DIC['component.factory'];
         return $component_factory->getPlugin(LearningObjectiveSuggestionsTrackingToolConstants::PLUGIN_ID);
-    }
-
-    /**
-     * @param string $a_mode
-     * @return string[]
-     */
-    public function getCssFiles(string $a_mode): array
-    {
-        return ['/css/tracking-tool.css'];
-    }
-
-    /**
-     * @param string $a_mode
-     * @return string[]
-     */
-    public function getJavascriptFiles(string $a_mode): array
-    {
-        return ['/js/tracking-tool.js'];
     }
 }
