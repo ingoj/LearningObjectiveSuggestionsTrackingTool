@@ -1,5 +1,7 @@
 <?php
 
+use ILIAS\UI\Component\Input\Container\Form\Standard;
+
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
  */
@@ -11,6 +13,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     private ilPlugin $pl;
 
+    private \ILIAS\UI\Factory $factory;
+
+    private \ILIAS\UI\Renderer $renderer;
+
     public function __construct()
     {
         global $DIC;
@@ -19,6 +25,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->ctrl = $DIC->ctrl();
         $this->pl = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
         $this->lng = $DIC->language();
+        $this->factory = $DIC->ui()->factory();
+        $this->renderer = $DIC->ui()->renderer();
     }
 
     /**
@@ -36,7 +44,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             'create',
             'update',
             'edit',
-            'cancel'
+            'cancel',
         ];
         if (in_array($cmd, $commands)) {
             $this->$cmd();
@@ -59,9 +67,48 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * Creating the editing dialog (opening config after the first time)
      *
      * @return void
+     * @throws ilCtrlException
+     * @throws ilFormException
      */
     public function edit(): void
     {
+        global $DIC;
+
+        $form = $this->buildConfigForm();
+        $DIC->ui()->mainTemplate()->setContent($this->renderer->render($form));
+    }
+
+    /**
+     * @throws ilCtrlException
+     */
+    public function buildConfigForm(): Standard
+    {
+        global $DIC;
+
+        $properties = $this->getProperties();
+
+        $field = $this->factory->input()->field();
+        $input_ref_id = $field->text($this->plugin->txt('ref_id'))
+                              ->withValue($properties['ref_id'] ?? '');
+
+        $form = $this->factory->input()->container()->form()->standard(
+            $DIC->ctrl()->getFormAction($this, 'update'),
+            [
+                'ref_id' => $input_ref_id
+            ]
+        );
+
+        return $form;
+    }
+
+    /**
+     * @return void
+     * @throws ilCtrlException
+     * @throws ilFormException
+     */
+    private function saveConfig(): void
+    {
+
     }
 
     /**
@@ -86,10 +133,34 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * Update config (save Form)
      *
      * @return void
+     * @throws ilCtrlException
      */
     public function update(): void
     {
-        $this->save();
+        global $DIC;
+
+        $tpl = $DIC->ui()->mainTemplate();
+        $form = $this->buildConfigForm();
+        $formRequest = $form->withRequest($DIC->http()->request());
+
+        $refId = (int) $formRequest->getData()['ref_id'];
+
+        if ($form->getError()) {
+            $this->tpl->setOnScreenMessage('failure', $this->plugin->txt('error'));
+            $this->returnToParent();
+        }
+
+        if ($refId === 0) {
+            $tpl->setOnScreenMessage('failure', $this->plugin->txt('updated_failure'), true);
+            $this->returnToParent();
+        }
+        $properties = $this->getProperties();
+        $properties['ref_id'] = $refId;
+
+        if ($this->updateElement($properties)) {
+            $tpl->setOnScreenMessage('success', $this->plugin->txt('updated_success'), true);
+            $this->returnToParent();
+        }
     }
 
     /**
@@ -103,10 +174,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     /**
      * @param bool $create
      * @return void
+     * @throws ilCtrlException
+     * @throws ilFormException
      */
-    protected function save(bool $create = false): void
+   /* protected function save(bool $create = false): void
     {
-    }
+    }*/
 
     /**
      * HTML Content
@@ -127,6 +200,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
+        $properties = $this->getProperties();
+        dd($properties['ref_id']);
+
         $template = $DIC->ui()->mainTemplate();
         $template->addCss(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/css/tracking-tool.css');
         $template->addJavaScript(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/js/tracking-tool.js');
@@ -142,11 +218,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $userId = $DIC->user()->getId();
         $sorted = $this->sortByScore($userId);
-        $finalTestsStates = ilLearnObjectFinalTestStates::getData([$userId]);
+        $finalTestsStates = self::getData($properties['ref_id'], [$userId])/*ilLearnObjectFinalTestStates::getData([$userId])*/;
         $learningObjectives = [];
 
         $learnObjectSuggestResults = ilLearnObjectSuggResults::getData([$userId]);
-
 
         $requiredPercentages = [];
         foreach ($finalTestsStates as $key => $finalTestState) {
@@ -185,7 +260,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         foreach ($finalTestsStates[$userId] as $finalTests) {
             foreach ($finalTests as $key => $value) {
-                if ($value->getLocftestCrsObjId()) {
+                if ($value->getLocftestCrsObjId()/* && $value->getLocftestCrsObjId() === 310*/) {
                     // check if data already exists
                     $crsObjId = $value->getLocftestCrsObjId();
                     $crsObjectiveId = $value->getLocftestObjectiveId();
@@ -196,6 +271,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     }
 
                     $trackingToolData[$value->getLocftestCrsObjId()][] = [
+                        'master_crs_id' => $value->getLocftestMasterCrsId(),
                         'title' => $value->getLocftestObjectiveTitle(),
                         'test_percentage' => $value->getLocftestPercentage(),
                         'test_required_percentage' => $value->getLocftestQplsRequiredPercentage(),
@@ -205,6 +281,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
             }
         }
+
         return $trackingToolData;
     }
 
@@ -549,5 +626,116 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             ];
         }
         return $sorting;
+    }
+
+    /**
+     * @param int   $refId
+     * @param array $arr_usr_ids
+     * @return array
+     */
+    public static function getData(int $refId, array $arr_usr_ids = array()): array
+    {
+        global $DIC;
+        $ilDB = $DIC->database();
+        $result = $ilDB->query(self::getSQL($refId, $arr_usr_ids));
+        $locftst_data = array();
+
+
+        while ($row = $ilDB->fetchAssoc($result)) {
+
+            $locftst_state = new ilLearnObjectFinalTestState();
+            $locftst_state->setLocftestUsrId($row['usr_id']);
+            $locftst_state->setLocftestCrsObjId($row['learn_objective_crs_obj_id']);
+            $locftst_state->setLocftestLearnObjectiveTitle($row['learn_objective_title']);
+            $locftst_state->setLocftestCrsTitle($row['learn_objective_crs_title']);
+            $locftst_state->setLocftestMasterObjectiveId($row['master_crs_objective_id']);
+            $locftst_state->setLocftestObjectiveId($row['crs_objective_id']);
+            $locftst_state->setLocftestObjectiveTitle($row['crs_objective_title']);
+            $locftst_state->setLocftestTestObjId($row['tst_obj_id']);
+            $locftst_state->setLocftestTestRefId($row['tst_ref_id']);
+            $locftst_state->setLocftestTestTitle($row['tst_title']);
+            $locftst_state->setLocftestPercentage($row['usr_percentage']);
+            $locftst_state->setObjectivesAllCompleted($row['objectives_all_completed']);
+            $locftst_state->setObjectivesSugCompleted($row['objectives_sug_completed']);
+            $locftst_state->setObjectivesSuggested($row['suggested']);
+            $locftst_state->setLocftestQplsRequiredPercentage($row['tst_req_percentage']);
+            $locftst_state->setLocftestMasterCrsId($row['master_crs_id']);
+            $locftst_state->setLocftestMasterCrsTitle($row['master_crs_title']);
+
+            $locftst_data[$row['usr_id']][$row['master_crs_objective_id']][] = $locftst_state;
+        }
+
+        return $locftst_data;
+    }
+
+    /**
+     * @param array $arr_usr_ids
+     * @param int   $refId
+     * @return string
+     */
+    protected static function getSQL(int $refId, array $arr_usr_ids = array()): string
+    {
+        global $DIC;
+        $ilDB = $DIC->database();
+
+
+        $learn_objectives_sugg_courses_query = new LearnObjectivesSuggCoursesQuery();
+        $learn_objectives_sugg_courses_query->createTemporaryTable(LearnObjectivesSuggCoursesQuery::DEFAULT_TMP_TABLE_NAME."_1");
+        $learn_objectives_sugg_courses_query->createTemporaryTable(LearnObjectivesSuggCoursesQuery::DEFAULT_TMP_TABLE_NAME."_2");
+        $learn_objectives_sugg_courses_query->createTemporaryTable(LearnObjectivesSuggCoursesQuery::DEFAULT_TMP_TABLE_NAME."_3");
+
+
+        $learn_objectives_courses_query = new LearnObjectivesCoursesQuery();
+        $learn_objectives_final_tests_query = new LearnObjectivesFinalTestsQuery();
+        $learn_objectives_final_tests_query->createTemporaryTable();
+
+        $select = "SELECT
+					learn_objective_crs.master_crs_id,
+					learn_objective_crs.master_crs_title,
+					learn_objective_crs.master_crs_objective_id,
+					learn_objective_crs.learn_objective_title,
+					learn_objective_crs.learn_objective_crs_title,
+       				learn_objective_crs.learn_objective_crs_obj_id,
+					final_tests.crs_objective_id,
+					final_tests.crs_objective_title,
+					final_tests.tst_title,
+					final_tests.tst_obj_id,
+					final_tests.tst_ref_id,
+					final_tests.tst_req_percentage,
+					crs_memb.usr_id as usr_id,
+					loc_user_results.result_perc as usr_percentage,
+					
+    				CASE WHEN loc_user_results.result_perc >= final_tests.tst_req_percentage then 1 else 0 end as objectives_all_completed,
+    				
+    				
+    				CASE WHEN exists (SELECT   * from ".LearnObjectivesSuggCoursesQuery::DEFAULT_TMP_TABLE_NAME."_1
+ where objective_id = learn_objective_crs.master_crs_objective_id AND  user_id = crs_memb.usr_id)  AND loc_user_results.result_perc >= final_tests.tst_req_percentage then 1 else 0 end as objectives_sug_completed,
+ 
+ 
+    				CASE WHEN exists (SELECT   * from ".LearnObjectivesSuggCoursesQuery::DEFAULT_TMP_TABLE_NAME."_2
+ where objective_id = learn_objective_crs.master_crs_objective_id AND  user_id = crs_memb.usr_id)  then loc_user_results.result_perc else 0 end as objectives_sug_percentage,
+    				
+    				CASE WHEN exists (SELECT   * from ".LearnObjectivesSuggCoursesQuery::DEFAULT_TMP_TABLE_NAME."_3
+ where objective_id = learn_objective_crs.master_crs_objective_id AND  user_id = crs_memb.usr_id)  then 1 else 0 end as suggested
+ 
+ 
+                    FROM 
+                    
+                    (".$learn_objectives_courses_query->getSQL().") as learn_objective_crs
+                    
+                    INNER JOIN (SELECT * from ".LearnObjectivesFinalTestsQuery::DEFAULT_TMP_TABLE_NAME.") as final_tests on final_tests.crs_id = learn_objective_crs.learn_objective_crs_obj_id
+                    
+                    INNER JOIN obj_members as crs_memb on ".$ilDB->in('crs_memb.usr_id', $arr_usr_ids, false, 'integer')." and crs_memb.obj_id = learn_objective_crs.master_crs_id
+                    
+                    LEFT JOIN
+    loc_user_results ON loc_user_results.course_id = final_tests.crs_id
+			        AND loc_user_results.user_id = crs_memb.usr_id AND ".$ilDB->in('loc_user_results.user_id', $arr_usr_ids, false, 'integer')."
+			        AND loc_user_results.type = ".ilLOUserResults::TYPE_QUALIFIED."
+			        AND  loc_user_results.objective_id = final_tests.crs_objective_id 
+			        WHERE learn_objective_crs.master_crs_id = " . $refId . "
+			        ORDER BY learn_objective_crs.master_crs_objective_position, final_tests.crs_objective_position";
+
+        //echo $select;	exit;
+        return $select;
     }
 }
