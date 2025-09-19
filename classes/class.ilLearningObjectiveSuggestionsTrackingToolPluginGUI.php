@@ -200,9 +200,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
-        $properties = $this->getProperties();
-        dd($properties['ref_id']);
-
         $template = $DIC->ui()->mainTemplate();
         $template->addCss(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/css/tracking-tool.css');
         $template->addJavaScript(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/js/tracking-tool.js');
@@ -218,33 +215,39 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $userId = $DIC->user()->getId();
         $sorted = $this->sortByScore($userId);
-        $finalTestsStates = self::getData($properties['ref_id'], [$userId])/*ilLearnObjectFinalTestStates::getData([$userId])*/;
+
         $learningObjectives = [];
+        if (!empty($a_properties['ref_id'])) {
+            $finalTestsStates = self::getData($a_properties['ref_id'], [$userId]);
 
-        $learnObjectSuggestResults = ilLearnObjectSuggResults::getData([$userId]);
 
-        $requiredPercentages = [];
-        foreach ($finalTestsStates as $key => $finalTestState) {
-            foreach ($finalTestState as $k => $value) {
-                $masterCrsId = $value[0]->getLocftestMasterCrsId();
-                $requiredPercentages[$masterCrsId] = 60;
+            $learnObjectSuggestResults = ilLearnObjectSuggResults::getData([$userId]);
+
+            $requiredPercentages = [];
+            foreach ($finalTestsStates as $key => $finalTestState) {
+                foreach ($finalTestState as $k => $value) {
+                    $masterCrsId = $value[0]->getLocftestMasterCrsId();
+                    $requiredPercentages[$masterCrsId] = 60;
+                }
+            }
+
+            if (count($finalTestsStates)) {
+                $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$userId]);
+            }
+
+
+            if( !empty($finalTestsStates[$userId])) {
+                $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
+
+                $learningObjectives = $this->storeCoursesInLearningObjectives(
+                    $learningObjectives,
+                    $trackingToolData,
+                    $requiredPercentages
+                );
             }
         }
 
-        if (count($finalTestsStates)) {
-            $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$userId]);
-        }
-
-        $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
-
-        $learningObjectives = $this->storeCoursesInLearningObjectives(
-            $learningObjectives,
-            $trackingToolData,
-            $requiredPercentages
-        );
-
         $this->buildAccordionHtml($learningObjectives, $userId);
-
         return $this->tpl->get();
     }
 
