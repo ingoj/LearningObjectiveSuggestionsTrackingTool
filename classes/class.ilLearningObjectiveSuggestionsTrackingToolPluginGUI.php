@@ -103,8 +103,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @return void
-     * @throws ilCtrlException
-     * @throws ilFormException
      */
     private function saveConfig(): void
     {
@@ -216,25 +214,43 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $userId = $DIC->user()->getId();
         $sorted = $this->sortByScore($userId);
 
+
         $learningObjectives = [];
         if (!empty($a_properties['ref_id'])) {
-            $finalTestsStates = self::getData($a_properties['ref_id'], [$userId]);
 
-
-            $learnObjectSuggestResults = ilLearnObjectSuggResults::getData([$userId]);
+            $courseObjId = ilObjCourse::_lookupObjectId($a_properties['ref_id']);
+            $finalTestsStates = self::getData($courseObjId, [$userId]);
 
             $requiredPercentages = [];
             foreach ($finalTestsStates as $key => $finalTestState) {
                 foreach ($finalTestState as $k => $value) {
                     $masterCrsId = $value[0]->getLocftestMasterCrsId();
-                    $requiredPercentages[$masterCrsId] = 60;
+                    $dataFinalTest = $this->getDataFinalTest($courseObjId);
+
+                    $tst = null;
+                    if (!empty($dataFinalTest['qtest'])) {
+                        $tst = new ilObjTest($dataFinalTest['qtest'], true);
+                    }
+
+                    if ($tst instanceof ilObjTest) {
+                        $schema = $tst->getMarkSchema();
+                        foreach ($schema->getMarkSteps() as $mark) {
+                            if ($mark->getPassed()) {
+                                $requiredPercentages[$masterCrsId] = (int) $mark->getMinimumLevel();
+                                break;
+                            }
+                        }
+                    }
+
+                    if (empty($requiredPercentages)) {
+                        $requiredPercentages[$masterCrsId] = 60;
+                    }
                 }
             }
 
             if (count($finalTestsStates)) {
                 $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$userId]);
             }
-
 
             if( !empty($finalTestsStates[$userId])) {
                 $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
@@ -643,7 +659,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $result = $ilDB->query(self::getSQL($refId, $arr_usr_ids));
         $locftst_data = array();
 
-
         while ($row = $ilDB->fetchAssoc($result)) {
 
             $locftst_state = new ilLearnObjectFinalTestState();
@@ -740,5 +755,27 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         //echo $select;	exit;
         return $select;
+    }
+
+    /**
+     * @param int $objId
+     * @return array
+     */
+    public static function getDataFinalTest(int $objId): array
+    {
+        global $DIC;
+        $ilDB = $DIC->database();
+
+        $select = "SELECT * FROM loc_settings 
+                    WHERE obj_id = " . $objId . " AND qtest IS NOT NULL";
+
+        $result = $ilDB->query($select);
+
+        $data = [];
+        while ($row = $ilDB->fetchAssoc($result)) {
+            $data = $row;
+        }
+
+        return $data;
     }
 }
