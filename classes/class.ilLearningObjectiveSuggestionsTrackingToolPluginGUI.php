@@ -4,10 +4,14 @@ use ILIAS\UI\Component\Input\Container\Form\Standard;
 
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
+ * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilUIPluginRouterGUI
+ * /
  */
 class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponentPluginGUI
 {
     private $tpl;
+
+    private \ILIAS\DI\Container $dic;
 
     private ilCtrlInterface $ctrl;
 
@@ -17,34 +21,53 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     private \ILIAS\UI\Renderer $renderer;
 
+    private ?int $refId = null;
+
+    private ?int $userId = null;
+
+
     public function __construct()
     {
         global $DIC;
 
         parent::__construct();
-        $this->ctrl = $DIC->ctrl();
+        $this->dic = $DIC;
+        $this->ctrl = $this->dic->ctrl();
         $this->pl = ilLearningObjectiveSuggestionsTrackingToolPlugin::getInstance();
-        $this->lng = $DIC->language();
-        $this->factory = $DIC->ui()->factory();
-        $this->renderer = $DIC->ui()->renderer();
+        $this->lng = $this->dic->language();
+        $this->factory = $this->dic->ui()->factory();
+        $this->renderer = $this->dic->ui()->renderer();
     }
 
     /**
      * Commands
      *
      * @return void
+     * @throws ilCtrlException
      */
     public function executeCommand(): void
     {
-        global $ilCtrl;
+        $refinery = $this->dic->refinery();
+        $http = $this->dic->http()->wrapper()->query();
 
-        $cmd = $ilCtrl->getCmd();
+        $this->refId = $http->has('tracking_tool_ref_id') ? $http->retrieve(
+            'tracking_tool_ref_id',
+            $refinery->kindlyTo()->string()
+        ) : null;
+
+        $this->userId = $http->has('tracking_tool_user_id') ? $http->retrieve(
+            'tracking_tool_user_id',
+            $refinery->kindlyTo()->string()
+        ) : null;
+
+        $cmd = $this->ctrl->getCmd();
 
         $commands = [
             'create',
             'update',
             'edit',
             'cancel',
+            'printCertificate'
         ];
         if (in_array($cmd, $commands)) {
             $this->$cmd();
@@ -68,7 +91,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      *
      * @return void
      * @throws ilCtrlException
-     * @throws ilFormException
      */
     public function edit(): void
     {
@@ -198,7 +220,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
-        $template = $DIC->ui()->mainTemplate();
+      /*  $template = $DIC->ui()->mainTemplate();
         $template->addCss(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/css/tracking-tool.css');
         $template->addJavaScript(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/js/tracking-tool.js');
 
@@ -209,13 +231,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             'public/' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY,
             ilGlobalTemplateInterface::DEFAULT_BLOCK,
             true
-        );
+        );*/
+
+        $this->pluginTemplate();
 
         $userId = $DIC->user()->getId();
-        $sorted = $this->sortByScore($userId);
+        /*$sorted = $this->sortByScore($userId);*/
 
-
-        $learningObjectives = [];
+        $learningObjectives = $this->getTrackingToolLearningObjectives($a_properties['ref_id'], (string) $userId);
+        /*$learningObjectives = [];
         if (!empty($a_properties['ref_id'])) {
 
             $courseObjId = ilObjCourse::_lookupObjectId($a_properties['ref_id']);
@@ -261,10 +285,90 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     $requiredPercentages
                 );
             }
-        }
+        }*/
 
-        $this->buildAccordionHtml($learningObjectives, $userId);
+        $this->buildAccordionHtml($learningObjectives, $userId, $a_properties['ref_id']);
         return $this->tpl->get();
+    }
+
+    /**
+     * @param string $refId
+     * @param string $userId
+     * @return array
+     */
+    private function getTrackingToolLearningObjectives(string $refId, string $userId): array
+    {
+        $sorted = $this->sortByScore($userId);
+
+        $learningObjectives = [];
+        if (!empty($refId)) {
+
+            $courseObjId = ilObjCourse::_lookupObjectId($refId);
+            $finalTestsStates = self::getData($courseObjId, [$userId]);
+
+            $requiredPercentages = [];
+            foreach ($finalTestsStates as $key => $finalTestState) {
+                foreach ($finalTestState as $k => $value) {
+                    $masterCrsId = $value[0]->getLocftestMasterCrsId();
+                    $dataFinalTest = $this->getDataFinalTest($courseObjId);
+
+                    $tst = null;
+                    if (!empty($dataFinalTest['qtest'])) {
+                        $tst = new ilObjTest($dataFinalTest['qtest'], true);
+                    }
+
+                    if ($tst instanceof ilObjTest) {
+                        $schema = $tst->getMarkSchema();
+                        foreach ($schema->getMarkSteps() as $mark) {
+                            if ($mark->getPassed()) {
+                                $requiredPercentages[$masterCrsId] = (int) $mark->getMinimumLevel();
+                                break;
+                            }
+                        }
+                    }
+
+                    if (empty($requiredPercentages)) {
+                        $requiredPercentages[$masterCrsId] = 60;
+                    }
+                }
+            }
+
+            if (count($finalTestsStates)) {
+                $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$userId]);
+            }
+
+            if( !empty($finalTestsStates[$userId])) {
+                $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
+
+                $learningObjectives = $this->storeCoursesInLearningObjectives(
+                    $learningObjectives,
+                    $trackingToolData,
+                    $requiredPercentages
+                );
+            }
+        }
+        return $learningObjectives;
+    }
+
+    /**
+     * @return void
+     * @throws ilSystemStyleException
+     * @throws ilTemplateException
+     */
+    private function pluginTemplate(): void
+    {
+        $template = $this->dic->ui()->mainTemplate();
+        $template->addCss(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/css/tracking-tool.css');
+        $template->addJavaScript(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/js/tracking-tool.js');
+
+        $this->tpl = new ilTemplate(
+            'tpl.tracking-tool.html',
+            true,
+            true,
+            'public/' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY,
+            ilGlobalTemplateInterface::DEFAULT_BLOCK,
+            true
+        );
     }
 
     /**
@@ -279,7 +383,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         foreach ($finalTestsStates[$userId] as $finalTests) {
             foreach ($finalTests as $key => $value) {
-                if ($value->getLocftestCrsObjId()/* && $value->getLocftestCrsObjId() === 310*/) {
+                if ($value->getLocftestCrsObjId()) {
                     // check if data already exists
                     $crsObjId = $value->getLocftestCrsObjId();
                     $crsObjectiveId = $value->getLocftestObjectiveId();
@@ -367,13 +471,17 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param array $learningObjectives
-     * @param int   $userId
+     * @param array  $learningObjectives
+     * @param int    $userId
+     * @param string $refId
      * @return void
      * @throws ilCtrlException
      */
-    private function buildAccordionHtml(array $learningObjectives, int $userId): void
-    {
+    private function buildAccordionHtml(
+        array $learningObjectives,
+        int $userId,
+        string $refId
+    ): void {
         global $DIC;
 
         $html = '<div class="tracking-tool">';
@@ -480,7 +588,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '<div class="tracking-tool-panel" id="tracking-tool-panel-' . $learningObjectiveObjId . '-' . $userId . '">';
             $html .= '<div class="tracking-tool-test-required-percentage">';
             $html .= '</div>';
-            $html .= $this->buildAccordionDropdownHtml($learningObjective['courses'], $learningObjective['required_percentage']);
+            $html .= $this->buildAccordionDropdownHtml(
+                $learningObjective['courses'],
+                $learningObjective['required_percentage'],
+            );
 
             $html .= '<div class="percent-line" style="width: ' . ($learningObjective['required_percentage'] ?? 0) . '%;">';
             $html .= '<div class="percent-line-percent"><span></span></div>';
@@ -495,7 +606,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $index++;
         }
         $html .= '</div>';
-        $this->setTemplateBlock($html);
+
+        $this->setTemplateBlock($html, $refId, (string) $userId);
     }
 
     /**
@@ -571,27 +683,43 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @param string $html
+     * @param string $refId
+     * @param string $userId
      * @return void
+     * @throws ilCtrlException
      */
-    private function setTemplateBlock(string $html): void
-    {
+    private function setTemplateBlock(
+        string $html,
+        string $refId,
+        string $userId
+    ): void {
         $this->tpl->setCurrentBlock('tracking_tool');
-        $this->setVariables($html);
+        $this->setVariables($html, $refId, $userId);
         $this->tpl->parseCurrentBlock();
     }
 
     /**
      * @param string $html
+     * @param string $refId
+     * @param string $userId
      * @return void
+     * @throws ilCtrlException
      */
-    private function setVariables(string $html): void
-    {
+    private function setVariables(
+        string $html,
+        string $refId,
+        string $userId
+    ): void {
         $this->tpl->setVariable('TITLE', $this->pl->txt('title'));
         $this->tpl->setVariable('SUBTITLE', $this->pl->txt('subtitle'));
         $this->tpl->setVariable('DESCRIPTION', $this->pl->txt('description'));
         $this->tpl->setVariable('LEARNING_SUGGESTION', $this->pl->txt('learning_suggestion') . ' <span class="lets-get-started">' . $this->pl->txt('lets_get_started') . '</span>');
         $this->tpl->setVariable('HTML', $html);
 
+        $printLink = $this->buildPrintLink($refId, $userId);
+
+        $this->tpl->setVariable('PRINT_BUTTON_TEXT', $this->pl->txt('print_certificate'));
+        $this->tpl->setVariable('PRINT_BUTTON_LINK', $printLink);
         $this->tpl->setVariable('LEGENDS_TEXT_LEGENDS', $this->pl->txt('legends_text_legends'));
         $this->tpl->setVariable('LEGENDS_TEXT_SOS', $this->pl->txt('legends_text_sos'));
         $this->tpl->setVariable('LEGENDS_TEXT_SOS_2', $this->pl->txt('legends_text_sos_2'));
@@ -602,7 +730,37 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('LEGENDS_TEXT_PERCENT_3', $this->pl->txt('legends_text_percent_3'));
         $this->tpl->setVariable('LEGENDS_TEXT_COMPLETED', $this->pl->txt('legends_text_completed'));
         $this->tpl->setVariable('LEGENDS_TEXT_COMPLETED_2', $this->pl->txt('legends_text_completed_2'));
+    }
 
+    /**
+     * @param string $refId
+     * @param string $userId
+     * @return string
+     * @throws ilCtrlException
+     */
+    private function buildPrintLink(string $refId, string $userId): string
+    {
+        $this->ctrl->setParameterByClass(
+            'ilObjCategoryGUI',
+            'tracking_tool_ref_id',
+            $refId
+        );
+
+        $this->ctrl->setParameterByClass(
+            'ilObjCategoryGUI',
+            'tracking_tool_user_id',
+            $userId
+        );
+
+        return $this->ctrl->getLinkTargetByClass(
+            [ilRepositoryGUI::class, ilObjCategoryGUI::class],
+            'view'
+        );
+    }
+
+
+    private function printCertificate()
+    {
 
     }
 
