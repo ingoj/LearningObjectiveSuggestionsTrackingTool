@@ -15,3 +15,10 @@ legends_text_percent_3#:#4 von 4
 legends_text_completed#:#Abgeschlossen:
 legends_text_completed_2#:#Der Kurs wurde vollständig bearbeitet!
 ref_id#:#Ref Id
+firstname#:#Vorname
+lastname#:#Nachname
+suggested_courses#:#Empfohlene Kurse
+personalized_additional_offer#:#Individuelles Zusatzangebot
+entry_test#:#Lernzuwachs-Check
+modal_box_info#:#Hinweis: Die hier eingegebenen Daten werden gemäß der Datenschutzerklärung dieser Platform gespeichert.
+modal_box_submit_button#:#Teilnahmebescheinigung drucken

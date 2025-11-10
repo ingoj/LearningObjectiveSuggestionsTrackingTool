@@ -15,3 +15,10 @@ legends_text_percent_3#:#4 von 4
 legends_text_completed#:#Abgeschlossen:
 legends_text_completed_2#:#Der Kurs wurde vollständig bearbeitet!
 ref_id#:#Ref Id
+firstname#:#Firstname
+lastname#:#Lastname
+suggested_courses#:#Suggested Courses
+personalized_additional_offer#:#Personalized additional program
+entry_test#:#Entry Test-Check
+modal_box_info#:#Notice: The data entered here will be stored in accordance with the privacy policy of this platform.
+modal_box_submit_button#:#Print Certificate

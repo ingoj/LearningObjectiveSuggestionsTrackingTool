@@ -9,6 +9,8 @@ use ILIAS\UI\Component\Input\Container\Form\Standard;
  */
 class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponentPluginGUI
 {
+    const CMD_PRINT_CERTIFICATE = 'printCertificate';
+
     private $tpl;
 
     private \ILIAS\DI\Container $dic;
@@ -49,11 +51,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     {
         $refinery = $this->dic->refinery();
         $http = $this->dic->http()->wrapper()->query();
-
+        dd('rthr');
         $this->refId = $http->has('tracking_tool_ref_id') ? $http->retrieve(
             'tracking_tool_ref_id',
             $refinery->kindlyTo()->string()
         ) : null;
+
+
 
         $this->userId = $http->has('tracking_tool_user_id') ? $http->retrieve(
             'tracking_tool_user_id',
@@ -288,8 +292,104 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }*/
 
         $this->buildAccordionHtml($learningObjectives, $userId, $a_properties['ref_id']);
+
         return $this->tpl->get();
     }
+
+    /**
+     * @throws ilCtrlException
+     */
+    private function getModal($learningObjectives)
+    {
+        /*$modalFormAction = $this->dic->ctrl()->getFormActionByClass(
+            self::class,
+            self::CMD_PRINT_CERTIFICATE
+        );*/
+
+        $this->ctrl->setParameterByClass(
+            ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class,
+            'tracking_tool_ref_id',
+            $this->refId
+        );
+
+        $modalFormAction = $this->ctrl->getLinkTargetByClass(
+            [ilUIPluginRouterGUI::class, ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class],
+            'printCertificate'
+        );
+
+        /*$objId = ilObjCourse::_lookupObjectId($this->courseRefId);
+        $certManip = new ilCertManip();
+        $certData = $certManip->getActiveCertificateByCourseAndUser($objId, (int) $this->userId);*/
+
+        $checkboxes = [];
+
+        foreach ($learningObjectives as $learningObjectiveObjId => $learningObjective) {
+            $checkboxes['learning_objective_' . $learningObjectiveObjId] = $this->factory->input()->field()->checkbox(
+                $learningObjective['txt']
+            );
+
+            $checkboxes['learning_objective_' . $learningObjectiveObjId . '_suggested_courses'] = $this->factory->input()->field()->checkbox(
+                $this->pl->txt('suggested_courses')
+            );
+
+            $checkboxes['learning_objective_' . $learningObjectiveObjId . 'personalized_additional_offer'] = $this->factory->input()->field()->checkbox(
+                $this->pl->txt('personalized_additional_offer')
+            );
+
+            $checkboxes['learning_objective_' . $learningObjectiveObjId . 'entry_test'] = $this->factory->input()->field()->checkbox(
+                $this->pl->txt('entry_test')
+            );
+        }
+
+        $userFields = [
+            'firstname' => $this->factory->input()->field()->text(
+                $this->pl->txt('firstname')
+            ),
+            'lastname' => $this->factory->input()->field()->text(
+                $this->pl->txt('lastname')
+            ),
+        ];
+
+        /*$section = $this->factory->input()->field()->section(
+            [
+                'firstname' => $this->factory->input()->field()->text(
+                    $this->pl->txt('firstname')
+                ),
+                'lastname' => $this->factory->input()->field()->text(
+                    $this->pl->txt('lastname')
+                ),
+            ],
+            "Section with required field",
+            "The Form should show an explaining hint at the bottom"
+        );
+
+        $userFields['user_data'] = $section;*/
+
+
+
+        $sectionCheckboxes = $this->factory->input()->field()->section(
+            $checkboxes,
+            '',
+            $this->pl->txt('modal_box_info')
+        )->withDedicatedName('section_options');
+
+        $optionsFields['options'] = $sectionCheckboxes;
+
+        $fields = array_merge($userFields, $optionsFields);
+
+
+        $modal = $this->factory->modal()->roundtrip(
+            $this->pl->txt('modal_title_1'),
+            [
+                $this->factory->messageBox()->info('Something.')
+            ],
+            $fields,
+            $modalFormAction
+        )->withSubmitLabel($this->pl->txt('modal_box_submit_button'));
+
+        return $modal->withOnLoad($modal->getShowSignal());
+    }
+
 
     /**
      * @param string $refId
@@ -607,7 +707,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
         $html .= '</div>';
 
-        $this->setTemplateBlock($html, $refId, (string) $userId);
+        $this->refId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
+
+        if (!empty($this->refId)) {
+            $html .= $this->renderer->render(
+                [$this->getModal($learningObjectives)]
+            );
+        }
+
+        $this->setTemplateBlock($html, $refId);
     }
 
     /**
@@ -684,31 +792,27 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     /**
      * @param string $html
      * @param string $refId
-     * @param string $userId
      * @return void
      * @throws ilCtrlException
      */
     private function setTemplateBlock(
         string $html,
-        string $refId,
-        string $userId
+        string $refId
     ): void {
         $this->tpl->setCurrentBlock('tracking_tool');
-        $this->setVariables($html, $refId, $userId);
+        $this->setVariables($html, $refId);
         $this->tpl->parseCurrentBlock();
     }
 
     /**
      * @param string $html
      * @param string $refId
-     * @param string $userId
      * @return void
      * @throws ilCtrlException
      */
     private function setVariables(
         string $html,
-        string $refId,
-        string $userId
+        string $refId
     ): void {
         $this->tpl->setVariable('TITLE', $this->pl->txt('title'));
         $this->tpl->setVariable('SUBTITLE', $this->pl->txt('subtitle'));
@@ -716,7 +820,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('LEARNING_SUGGESTION', $this->pl->txt('learning_suggestion') . ' <span class="lets-get-started">' . $this->pl->txt('lets_get_started') . '</span>');
         $this->tpl->setVariable('HTML', $html);
 
-        $printLink = $this->buildPrintLink($refId, $userId);
+        $printLink = $this->buildPrintLink($refId);
 
         $this->tpl->setVariable('PRINT_BUTTON_TEXT', $this->pl->txt('print_certificate'));
         $this->tpl->setVariable('PRINT_BUTTON_LINK', $printLink);
@@ -734,22 +838,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @param string $refId
-     * @param string $userId
      * @return string
      * @throws ilCtrlException
      */
-    private function buildPrintLink(string $refId, string $userId): string
+    private function buildPrintLink(string $refId): string
     {
         $this->ctrl->setParameterByClass(
             'ilObjCategoryGUI',
             'tracking_tool_ref_id',
             $refId
-        );
-
-        $this->ctrl->setParameterByClass(
-            'ilObjCategoryGUI',
-            'tracking_tool_user_id',
-            $userId
         );
 
         return $this->ctrl->getLinkTargetByClass(
@@ -936,4 +1033,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         return $data;
     }
+
+    /**
+     * @param string $param
+     * @param int    $filter
+     * @return int|null
+     */
+    protected function fetchUrlParameter(string $param, int $filter): ?int
+    {
+        return filter_input(INPUT_GET, $param, $filter);
+    }
+
 }
