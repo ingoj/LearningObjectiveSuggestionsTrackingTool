@@ -355,3 +355,7 @@
 .tracking-tool.tooltiptext .font-normal  {
     font-weight: normal;
 }
+
+.container-tracking-tool .print-button-hidden  {
+    display: none;
+}

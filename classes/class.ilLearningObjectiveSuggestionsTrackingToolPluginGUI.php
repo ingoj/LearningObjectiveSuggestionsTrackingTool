@@ -49,21 +49,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function executeCommand(): void
     {
-        $refinery = $this->dic->refinery();
-        $http = $this->dic->http()->wrapper()->query();
-        dd('rthr');
-        $this->refId = $http->has('tracking_tool_ref_id') ? $http->retrieve(
-            'tracking_tool_ref_id',
-            $refinery->kindlyTo()->string()
-        ) : null;
-
-
-
-        $this->userId = $http->has('tracking_tool_user_id') ? $http->retrieve(
-            'tracking_tool_user_id',
-            $refinery->kindlyTo()->string()
-        ) : null;
-
         $cmd = $this->ctrl->getCmd();
 
         $commands = [
@@ -224,74 +209,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             return '';
         }
 
-      /*  $template = $DIC->ui()->mainTemplate();
-        $template->addCss(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/css/tracking-tool.css');
-        $template->addJavaScript(ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY . '/templates/js/tracking-tool.js');
-
-        $this->tpl = new ilTemplate(
-            'tpl.tracking-tool.html',
-            true,
-            true,
-            'public/' . ilLearningObjectiveSuggestionsTrackingToolPlugin::PLUGIN_DIRECTORY,
-            ilGlobalTemplateInterface::DEFAULT_BLOCK,
-            true
-        );*/
-
         $this->pluginTemplate();
 
         $userId = $DIC->user()->getId();
-        /*$sorted = $this->sortByScore($userId);*/
-
-        $learningObjectives = $this->getTrackingToolLearningObjectives($a_properties['ref_id'], (string) $userId);
-        /*$learningObjectives = [];
-        if (!empty($a_properties['ref_id'])) {
-
-            $courseObjId = ilObjCourse::_lookupObjectId($a_properties['ref_id']);
-            $finalTestsStates = self::getData($courseObjId, [$userId]);
-
-            $requiredPercentages = [];
-            foreach ($finalTestsStates as $key => $finalTestState) {
-                foreach ($finalTestState as $k => $value) {
-                    $masterCrsId = $value[0]->getLocftestMasterCrsId();
-                    $dataFinalTest = $this->getDataFinalTest($courseObjId);
-
-                    $tst = null;
-                    if (!empty($dataFinalTest['qtest'])) {
-                        $tst = new ilObjTest($dataFinalTest['qtest'], true);
-                    }
-
-                    if ($tst instanceof ilObjTest) {
-                        $schema = $tst->getMarkSchema();
-                        foreach ($schema->getMarkSteps() as $mark) {
-                            if ($mark->getPassed()) {
-                                $requiredPercentages[$masterCrsId] = (int) $mark->getMinimumLevel();
-                                break;
-                            }
-                        }
-                    }
-
-                    if (empty($requiredPercentages)) {
-                        $requiredPercentages[$masterCrsId] = 60;
-                    }
-                }
-            }
-
-            if (count($finalTestsStates)) {
-                $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$userId]);
-            }
-
-            if( !empty($finalTestsStates[$userId])) {
-                $trackingToolData = $this->getTrackingToolData($finalTestsStates, $userId);
-
-                $learningObjectives = $this->storeCoursesInLearningObjectives(
-                    $learningObjectives,
-                    $trackingToolData,
-                    $requiredPercentages
-                );
-            }
-        }*/
-
-        $this->buildAccordionHtml($learningObjectives, $userId, $a_properties['ref_id']);
+        $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
+        $this->buildAccordionHtml($learningObjectives, $userId, $a_properties['ref_id'] ?? null);
 
         return $this->tpl->get();
     }
@@ -301,82 +223,95 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function getModal($learningObjectives)
     {
-        /*$modalFormAction = $this->dic->ctrl()->getFormActionByClass(
-            self::class,
-            self::CMD_PRINT_CERTIFICATE
-        );*/
-
-        $this->ctrl->setParameterByClass(
-            ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class,
-            'tracking_tool_ref_id',
-            $this->refId
-        );
-
         $modalFormAction = $this->ctrl->getLinkTargetByClass(
             [ilUIPluginRouterGUI::class, ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class],
             'printCertificate'
         );
 
-        /*$objId = ilObjCourse::_lookupObjectId($this->courseRefId);
-        $certManip = new ilCertManip();
-        $certData = $certManip->getActiveCertificateByCourseAndUser($objId, (int) $this->userId);*/
+        $participationCertificatePlugin = ilParticipationCertificatePlugin::getInstance();
+
+        $userId = $this->dic->user()->getId();
+
+        $userData = ilPartCertUsersData::getData($participationCertificatePlugin, [$userId]);
+        $firstname = $userData[$userId]->getPartCertFirstname();
+        $lastname = $userData[$userId]->getPartCertLastname();
+
+        $firstnameField = $this->factory->input()->field()->text($this->pl->txt('firstname'))
+                                        ->withDedicatedName('firstname')
+                                        ->withValue($firstname ?? '')
+                                        ->withDisabled(!empty($firstname));
+
+        $lastnameField = $this->factory->input()->field()->text($this->pl->txt('lastname'))
+                                       ->withDedicatedName('lastname')
+                                       ->withValue($lastname ?? '')
+                                       ->withDisabled(!empty($lastname));
+
+        $sectionUserData = $this->factory->input()->field()->section(
+            [
+                'firstname' => $firstnameField,
+                'lastname' => $lastnameField,
+            ],
+            '',
+            ''
+        )->withDedicatedName('user_data');
+
+        $userFields['user_data'] = $sectionUserData;
+
+        $sectionInfo = $this->factory->input()->field()->section(
+            [],
+            '',
+            $this->pl->txt('modal_box_info')
+        );
+
+        $info['info'] = $sectionInfo;
+
 
         $checkboxes = [];
-
         foreach ($learningObjectives as $learningObjectiveObjId => $learningObjective) {
             $checkboxes['learning_objective_' . $learningObjectiveObjId] = $this->factory->input()->field()->checkbox(
                 $learningObjective['txt']
-            );
+            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId);
 
             $checkboxes['learning_objective_' . $learningObjectiveObjId . '_suggested_courses'] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('suggested_courses')
-            );
+            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId . '_suggested_courses');
 
             $checkboxes['learning_objective_' . $learningObjectiveObjId . 'personalized_additional_offer'] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('personalized_additional_offer')
-            );
+            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId . '_personalized_additional_offer');
 
             $checkboxes['learning_objective_' . $learningObjectiveObjId . 'entry_test'] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('entry_test')
-            );
+            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId . 'entry_test');
         }
-
-        $userFields = [
-            'firstname' => $this->factory->input()->field()->text(
-                $this->pl->txt('firstname')
-            ),
-            'lastname' => $this->factory->input()->field()->text(
-                $this->pl->txt('lastname')
-            ),
-        ];
-
-        /*$section = $this->factory->input()->field()->section(
-            [
-                'firstname' => $this->factory->input()->field()->text(
-                    $this->pl->txt('firstname')
-                ),
-                'lastname' => $this->factory->input()->field()->text(
-                    $this->pl->txt('lastname')
-                ),
-            ],
-            "Section with required field",
-            "The Form should show an explaining hint at the bottom"
-        );
-
-        $userFields['user_data'] = $section;*/
-
-
 
         $sectionCheckboxes = $this->factory->input()->field()->section(
             $checkboxes,
             '',
-            $this->pl->txt('modal_box_info')
-        )->withDedicatedName('section_options');
+            ''
+        )->withDedicatedName('options');
 
         $optionsFields['options'] = $sectionCheckboxes;
 
-        $fields = array_merge($userFields, $optionsFields);
 
+        $fields = array_merge($userFields, $info, $optionsFields);
+
+        $eMentoring = (bool) ilParticipationCertificateConfig::getConfig('enable_ementoring', $this->refId);
+
+        if ($eMentoring) {
+            $sectionEMentoring = $this->factory->input()->field()->section(
+                [
+                    $this->factory->input()->field()->checkbox(
+                        $this->pl->txt('ementoring')
+                    )->withDedicatedName('status')
+                ],
+                '',
+                ''
+            )->withDedicatedName('ementoring');
+
+            $eMentoringField['ementoring'] = $sectionEMentoring;
+            $fields = array_merge($fields, $eMentoringField);
+        }
 
         $modal = $this->factory->modal()->roundtrip(
             $this->pl->txt('modal_title_1'),
@@ -390,13 +325,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         return $modal->withOnLoad($modal->getShowSignal());
     }
 
-
     /**
-     * @param string $refId
-     * @param string $userId
+     * @param string      $userId
+     * @param string|null $refId
      * @return array
      */
-    private function getTrackingToolLearningObjectives(string $refId, string $userId): array
+    private function getTrackingToolLearningObjectives(string $userId, ?string $refId = null): array
     {
         $sorted = $this->sortByScore($userId);
 
@@ -571,16 +505,16 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param array  $learningObjectives
-     * @param int    $userId
-     * @param string $refId
+     * @param array       $learningObjectives
+     * @param int         $userId
+     * @param string|null $propertiesRefId
      * @return void
      * @throws ilCtrlException
      */
     private function buildAccordionHtml(
         array $learningObjectives,
         int $userId,
-        string $refId
+        ?string $propertiesRefId = null
     ): void {
         global $DIC;
 
@@ -619,8 +553,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $checkIcon = 'passed.svg';
             }
 
-            $refId = $this->getCourseRefId($learningObjectiveObjId);
-            $this->setRefIdAsClassParameter($refId);
+            $courseRefId = $this->getCourseRefId($learningObjectiveObjId);
+            $this->setRefIdAsClassParameter($courseRefId);
             $courseLink = $this->getCourseLink();
 
             if (($suggestedIndex = array_search($learningObjectiveObjId, $suggestedKeys)) !== false) {
@@ -710,12 +644,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->refId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
 
         if (!empty($this->refId)) {
+
+
+            $this->ctrl->setParameterByClass(
+                self::class,
+                'tracking_tool_ref_id',
+                $this->refId
+            );
+
             $html .= $this->renderer->render(
                 [$this->getModal($learningObjectives)]
             );
         }
-
-        $this->setTemplateBlock($html, $refId);
+        $this->setTemplateBlock($html, $propertiesRefId);
     }
 
     /**
@@ -790,14 +731,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param string $html
-     * @param string $refId
+     * @param string      $html
+     * @param string|null $refId
      * @return void
      * @throws ilCtrlException
      */
     private function setTemplateBlock(
         string $html,
-        string $refId
+        ?string $refId = null
     ): void {
         $this->tpl->setCurrentBlock('tracking_tool');
         $this->setVariables($html, $refId);
@@ -805,14 +746,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param string $html
-     * @param string $refId
+     * @param string      $html
+     * @param string|null $refId
      * @return void
      * @throws ilCtrlException
+     * @throws Exception
      */
     private function setVariables(
         string $html,
-        string $refId
+        ?string $refId = null
     ): void {
         $this->tpl->setVariable('TITLE', $this->pl->txt('title'));
         $this->tpl->setVariable('SUBTITLE', $this->pl->txt('subtitle'));
@@ -820,10 +762,23 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('LEARNING_SUGGESTION', $this->pl->txt('learning_suggestion') . ' <span class="lets-get-started">' . $this->pl->txt('lets_get_started') . '</span>');
         $this->tpl->setVariable('HTML', $html);
 
-        $printLink = $this->buildPrintLink($refId);
+        if(!empty($refId)) {
+            $certificateAccess = new ilParticipationCertificateAccess($refId);
+            $printButtonCssClass = 'print-button';
+            if($certificateAccess->isSelfPrintEnabled()) {
+                $printButtonCssClass .= '-visible';
+            } else {
+                $printButtonCssClass .= '-hidden';
+            }
 
-        $this->tpl->setVariable('PRINT_BUTTON_TEXT', $this->pl->txt('print_certificate'));
-        $this->tpl->setVariable('PRINT_BUTTON_LINK', $printLink);
+            $this->tpl->setVariable('PRINT_BUTTON_CLASS', $printButtonCssClass);
+            $printLink = $this->buildPrintLink($refId);
+            $this->tpl->setVariable('PRINT_BUTTON_TEXT', $this->pl->txt('print_certificate'));
+            $this->tpl->setVariable('PRINT_BUTTON_LINK', $printLink);
+        }
+
+
+
         $this->tpl->setVariable('LEGENDS_TEXT_LEGENDS', $this->pl->txt('legends_text_legends'));
         $this->tpl->setVariable('LEGENDS_TEXT_SOS', $this->pl->txt('legends_text_sos'));
         $this->tpl->setVariable('LEGENDS_TEXT_SOS_2', $this->pl->txt('legends_text_sos_2'));
@@ -843,6 +798,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function buildPrintLink(string $refId): string
     {
+        $itemRefId = $this->fetchUrlParameter('item_ref_id', FILTER_DEFAULT);
+
+        $this->ctrl->setParameterByClass(
+            'ilObjCategoryGUI',
+            'item_ref_id',
+            $itemRefId
+        );
+
         $this->ctrl->setParameterByClass(
             'ilObjCategoryGUI',
             'tracking_tool_ref_id',
@@ -859,6 +822,97 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     private function printCertificate()
     {
 
+        $refinery = $this->dic->refinery();
+        $http = $this->dic->http()->wrapper()->query();
+
+        $request = $this->dic->http()->wrapper()->post();
+        $eMentoring = false;
+
+        dd($request);
+
+
+        if ($request->has('form/user_data/firstname')) {
+            $firstname = $request->retrieve(
+                'form/user_data/firstname',
+                $refinery->kindlyTo()->string()
+            );
+
+            if (empty($firstname)) {
+                /*$this->ctrl->setParameterByClass(
+                    'ilObjCategoryGUI',
+                    'ref_id',
+                    $this->fetchUrlParameter('ref_id', FILTER_DEFAULT)
+                );*/
+
+                dd("NOT VALID DATA");
+                // TODO check redirection
+                $this->ctrl->redirectByClass(
+                    [ilRepositoryGUI::class, ilObjCategoryGUI::class],
+                    'view'
+                );
+            }
+        }
+
+        if ($request->has('form/user_data/lastname')) {
+            $lastname = $request->retrieve(
+                'form/user_data/lastname',
+                $refinery->kindlyTo()->string()
+            );
+
+            if (empty($lastname)) {
+                dd("NOT VALID DATA");
+                // TODO check redirection
+                $this->ctrl->redirectByClass(
+                    [ilRepositoryGUI::class, ilObjCategoryGUI::class],
+                    'view'
+                );
+            }
+        }
+
+        if ($request->has('form/ementoring/status')) {
+            $eMentoringStatus = $request->retrieve(
+                'form/ementoring/status',
+                $refinery->kindlyTo()->string()
+            );
+
+
+            if ($eMentoringStatus === 'checked') {
+                $eMentoring = true;
+            }
+        }
+
+        $this->refId = $http->has('tracking_tool_ref_id') ? $http->retrieve(
+            'tracking_tool_ref_id',
+            $refinery->kindlyTo()->string()
+        ) : null;
+
+        $certificateAccess = new ilParticipationCertificateAccess($this->refId);
+
+        if ($certificateAccess->hasCurrentUserPrintAccess()) {
+
+            //$ementoring = (bool) ilParticipationCertificateConfig::getConfig('enable_ementoring', $this->refId);
+
+            $userId = $this->dic->user()->getId();
+
+            $participationCertificatePlugin = ilParticipationCertificatePlugin::getInstance();
+
+            $userData = ilPartCertUsersData::getData($participationCertificatePlugin, [$userId]);
+
+            $twigParser = new ilParticipationCertificateTwigParser(
+                $this->refId,
+                [],
+                [$userId],
+                $eMentoring,
+                false
+            );
+
+            $twigParser->parseData($this->refId);
+        } else {
+
+            // TODO test it
+            $this->tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
+            $this->dic->ctrl()->redirectToURL('login.php');
+        }
     }
 
     /**
