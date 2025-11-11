@@ -367,3 +367,9 @@
 .container-tracking-tool .entry-test  {
     padding-top: 50px;
 }
+
+.container-tracking-tool .icon-file  {
+    float: right;
+    height: 100px;
+    width: 50px;
+}

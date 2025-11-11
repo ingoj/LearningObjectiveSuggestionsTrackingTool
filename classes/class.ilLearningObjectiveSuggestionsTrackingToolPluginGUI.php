@@ -214,6 +214,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $userId = $DIC->user()->getId();
         $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
 
+        // TODO
         $entryTest = [];
         if (!empty($a_properties['ref_id'])) {
             $courseObjId = ilObjCourse::_lookupObjectId($a_properties['ref_id']);
@@ -562,6 +563,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $html = '<div class="tracking-tool">';
         $index = 1;
+
         $suggestedKeys = array_keys(array_filter($learningObjectives, function ($target) {
             return !empty($target['suggested']) && $target['suggested'] === true;
         }));
@@ -572,6 +574,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $lastVisitedObjId = null;
         foreach ($navigationHistory as $historyItem) {
             $historyItemObjectId = ilObject::_lookupObjectId($historyItem['ref_id']);
+
             foreach ($learningObjectives as $key => $learningObjective) {
                 if ($historyItem['type'] === 'crs' &&
                     $historyItemObjectId == $key
@@ -815,10 +818,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $this->tpl->setVariable('PRINT_BUTTON_CLASS', $printButtonCssClass);
             $printLink = $this->buildPrintLink($refId);
-            $this->tpl->setVariable('PRINT_BUTTON_TEXT', $this->pl->txt('print_certificate'));
             $this->tpl->setVariable('PRINT_BUTTON_LINK', $printLink);
         }
 
+        $this->tpl->setVariable('SUGGESTED_COURSES_TITLE', $this->pl->txt('suggested_courses_title'));
+        $this->tpl->setVariable('NOT_SUGGESTED_COURSES_TITLE', $this->pl->txt('not_suggested_courses_title'));
 
 
         $this->tpl->setVariable('LEGENDS_TEXT_LEGENDS', $this->pl->txt('legends_text_legends'));
