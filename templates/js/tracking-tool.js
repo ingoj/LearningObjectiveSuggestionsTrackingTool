@@ -30,6 +30,8 @@
     accordionButton.setAttribute('data-action', accordionButtonAction);
   }
 
+
+
   for (i = 0; i < accordionButtons.length; i++) {
 
     initialLoad(accordionButtons[i]);
@@ -67,4 +69,27 @@
       }
     });
   }
+
+
+ /* const firstname = document.querySelector('input[name="form/user_data/firstname"]');
+  const lastname = document.querySelector('input[name="form/user_data/lastname"]');
+  const submitButton = document.querySelector('.modal-footer form button:not(.close)');
+
+  function toggleButton() {
+    if (
+      firstname.value.trim().length === 0 ||
+      lastname.value.trim().length === 0
+    ) {
+      submitButton.disabled = true;
+    } else {
+      submitButton.disabled = false;
+    }
+  }
+
+  // initial check
+  toggleButton();
+
+  // listen for typing or changes
+  firstname.addEventListener('input', toggleButton);
+  lastname.addEventListener('input', toggleButton);*/
 })();

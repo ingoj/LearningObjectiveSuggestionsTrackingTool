@@ -213,6 +213,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $userId = $DIC->user()->getId();
         $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
+
+        $entryTest = [];
+        if (!empty($a_properties['ref_id'])) {
+            $courseObjId = ilObjCourse::_lookupObjectId($a_properties['ref_id']);
+            $entryTest = $this->getDataEntryTest($courseObjId);
+        }
+
         $this->buildAccordionHtml($learningObjectives, $userId, $a_properties['ref_id'] ?? null);
 
         return $this->tpl->get();
@@ -320,7 +327,42 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             ],
             $fields,
             $modalFormAction
-        )->withSubmitLabel($this->pl->txt('modal_box_submit_button'));
+        )->withDedicatedName('tracking-tool-modal')
+         ->withSubmitLabel($this->pl->txt('modal_box_submit_button'))
+         ->withOnLoadCode(function ($id) {
+                return <<<JS
+        
+                const form = $('.modal-footer form');
+                const submitButton = form.find('button:not(.close)');
+
+                const firstname = $('input[name="form/user_data/firstname"]');
+                const lastname = $('input[name="form/user_data/lastname"]');
+                const entryTest = $('input[name="form/user_data/entry_test"]');
+                
+                
+                /*function toggleButton() {
+                   alert(firstname.val());
+                   alert(lastname.val());
+                   
+                    if (firstname.val().length === 0 || lastname.val().length === 0) {
+                        submitButton.prop('disabled', true);
+                    } else {
+                        submitButton.prop('disabled', false);
+                    }
+                }
+
+                toggleButton(); // initial check
+                 
+                firstname.change(function() {
+                   toggleButton()
+                });
+                 
+                lastname.change(function() {
+                   toggleButton()
+                });*/
+        JS;
+            });
+        ;
 
         return $modal->withOnLoad($modal->getShowSignal());
     }
@@ -828,9 +870,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $request = $this->dic->http()->wrapper()->post();
         $eMentoring = false;
 
-        dd($request);
-
-
         if ($request->has('form/user_data/firstname')) {
             $firstname = $request->retrieve(
                 'form/user_data/firstname',
@@ -1075,10 +1114,32 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         global $DIC;
         $ilDB = $DIC->database();
 
-        $select = "SELECT * FROM loc_settings 
-                    WHERE obj_id = " . $objId . " AND qtest IS NOT NULL";
+        $result = $ilDB->queryF(
+            "SELECT * FROM loc_settings
+              WHERE obj_id = %s AND qtest IS NOT NULL",
+            ['integer'],
+            [$objId]
+        );
 
-        $result = $ilDB->query($select);
+        $data = [];
+        while ($row = $ilDB->fetchAssoc($result)) {
+            $data = $row;
+        }
+
+        return $data;
+    }
+
+    public static function getDataEntryTest(int $objId): array
+    {
+        global $DIC;
+        $ilDB = $DIC->database();
+
+        $result = $ilDB->queryF(
+            "SELECT * FROM loc_settings
+              WHERE obj_id = %s AND itest IS NOT NULL",
+            ['integer'],
+            [$objId]
+        );
 
         $data = [];
         while ($row = $ilDB->fetchAssoc($result)) {

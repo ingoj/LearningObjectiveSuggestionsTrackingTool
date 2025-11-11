@@ -359,3 +359,11 @@
 .container-tracking-tool .print-button-hidden  {
     display: none;
 }
+
+.container-tracking-tool .modal-dialog form button:nth-child(2)  {
+    display: none;
+}
+
+.container-tracking-tool .entry-test  {
+    padding-top: 50px;
+}
