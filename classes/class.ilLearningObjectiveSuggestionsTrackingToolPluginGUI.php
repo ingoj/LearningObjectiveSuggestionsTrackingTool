@@ -1,6 +1,13 @@
 <?php
 
 use ILIAS\UI\Component\Input\Container\Form\Standard;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Config\CourseConfig;
+use Mpdf\MpdfException;
+use Twig\Error\LoaderError;
+use Twig\Error\SyntaxError;
+use setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException;
+use setasign\Fpdi\PdfParser\PdfParserException;
+use setasign\Fpdi\PdfParser\Type\PdfTypeException;
 
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
@@ -229,7 +236,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     /**
      * @throws ilCtrlException
      */
-    private function getModal($learningObjectives)
+    private function getModal()
     {
         $modalFormAction = $this->ctrl->getLinkTargetByClass(
             [ilUIPluginRouterGUI::class, ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class],
@@ -254,10 +261,20 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                                        ->withValue($lastname ?? '')
                                        ->withDisabled(!empty($lastname));
 
+        $hiddenFirstnameField = $this->factory->input()->field()->hidden()
+                                       ->withDedicatedName('hidden_firstname')
+                                       ->withValue($firstname ?? '');
+
+        $hiddenLastnameField = $this->factory->input()->field()->hidden()
+                                              ->withDedicatedName('hidden_lastname')
+                                              ->withValue($firstname ?? '');
+
         $sectionUserData = $this->factory->input()->field()->section(
             [
                 'firstname' => $firstnameField,
                 'lastname' => $lastnameField,
+                'hidden_firstname' => $hiddenFirstnameField,
+                'hidden_lastname' => $hiddenLastnameField
             ],
             '',
             ''
@@ -273,24 +290,25 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $info['info'] = $sectionInfo;
 
+        $courses = $this->getUserCourses($userId);
 
         $checkboxes = [];
-        foreach ($learningObjectives as $learningObjectiveObjId => $learningObjective) {
-            $checkboxes['learning_objective_' . $learningObjectiveObjId] = $this->factory->input()->field()->checkbox(
-                $learningObjective['txt']
-            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId);
+        foreach ($courses as $course) {
+            $checkboxes['course_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
+                ilObjCourse::_lookupTitle($course['obj_id'])
+            )->withDedicatedName('course_' . $course['obj_id']);
 
-            $checkboxes['learning_objective_' . $learningObjectiveObjId . '_suggested_courses'] = $this->factory->input()->field()->checkbox(
+            $checkboxes['course_suggested_courses_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('suggested_courses')
-            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId . '_suggested_courses');
+            )->withDedicatedName('course_suggested_courses_' . $course['obj_id']);
 
-            $checkboxes['learning_objective_' . $learningObjectiveObjId . 'personalized_additional_offer'] = $this->factory->input()->field()->checkbox(
+            $checkboxes['course_personalized_additional_offer_' . $course['obj_id'] ] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('personalized_additional_offer')
-            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId . '_personalized_additional_offer');
+            )->withDedicatedName('course_personalized_additional_offer_'  . $course['obj_id']);
 
-            $checkboxes['learning_objective_' . $learningObjectiveObjId . 'entry_test'] = $this->factory->input()->field()->checkbox(
+            $checkboxes['course_entry_test_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('entry_test')
-            )->withDedicatedName('learning_objective_' . $learningObjectiveObjId . 'entry_test');
+            )->withDedicatedName('course_entry_test_' . $course['obj_id']);
         }
 
         $sectionCheckboxes = $this->factory->input()->field()->section(
@@ -698,7 +716,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             );
 
             $html .= $this->renderer->render(
-                [$this->getModal($learningObjectives)]
+                component: [$this->getModal()]
             );
         }
         $this->setTemplateBlock($html, $propertiesRefId);
@@ -864,15 +882,26 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         );
     }
 
-
-    private function printCertificate()
+    /**
+     * @return void
+     * @throws MpdfException
+     * @throws LoaderError
+     * @throws SyntaxError
+     * @throws CrossReferenceException
+     * @throws PdfParserException
+     * @throws PdfTypeException
+     * @throws arException
+     * @throws ilCtrlException
+     * @throws ilDateTimeException
+     */
+    private function printCertificate(): void
     {
-
         $refinery = $this->dic->refinery();
         $http = $this->dic->http()->wrapper()->query();
 
         $request = $this->dic->http()->wrapper()->post();
         $eMentoring = false;
+
 
         if ($request->has('form/user_data/firstname')) {
             $firstname = $request->retrieve(
@@ -894,6 +923,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     'view'
                 );
             }
+        } elseif ($request->has('form/user_data/hidden_firstname')) {
+            $firstname = $request->retrieve(
+                'form/user_data/hidden_firstname',
+                $refinery->kindlyTo()->string()
+            );
         }
 
         if ($request->has('form/user_data/lastname')) {
@@ -910,6 +944,58 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     'view'
                 );
             }
+        } elseif ($request->has('form/user_data/hidden_lastname')) {
+            $lastname = $request->retrieve(
+                'form/user_data/hidden_lastname',
+                $refinery->kindlyTo()->string()
+            );
+        }
+
+        $userId = $this->dic->user()->getId();
+        $courses = $this->getUserCourses($userId);
+
+        $coursesToPrint = [];
+        foreach ($courses as $course) {
+
+            if ($request->has('form/options/course_' . $course['obj_id'])) {
+                $courseObjId = $request->retrieve(
+                    'form/options/course_' . $course['obj_id'],
+                    $refinery->kindlyTo()->string()
+                );
+
+                $coursesToPrint[$course['obj_id']] = [];
+            }
+
+            if ($request->has('form/options/course_suggested_courses_' . $course['obj_id'])) {
+                $suggestedCourses = $request->retrieve(
+                    'form/options/course_suggested_courses_' . $course['obj_id'],
+                    $refinery->kindlyTo()->string()
+                );
+
+                $coursesToPrint[$course['obj_id']]['suggested_courses'] = true;
+            } else {
+                $coursesToPrint[$course['obj_id']]['suggested_courses'] = false;
+            }
+
+            if ($request->has('form/options/course_personalized_additional_offer_' . $course['obj_id'])) {
+                $additionalOffer = $request->retrieve(
+                    'form/options/course_personalized_additional_offer_' . $course['obj_id'],
+                    $refinery->kindlyTo()->string()
+                );
+                $coursesToPrint[$course['obj_id']]['additional_offer'] = true;
+            } else {
+                $coursesToPrint[$course['obj_id']]['additional_offer'] = false;
+            }
+
+            if ($request->has('form/options/course_entry_test_' . $course['obj_id'])) {
+                $entryTest = $request->retrieve(
+                    'form/options/course_entry_test_' . $course['obj_id'],
+                    $refinery->kindlyTo()->string()
+                );
+                $coursesToPrint[$course['obj_id']]['entry_test'] = true;
+            } else {
+                $coursesToPrint[$course['obj_id']]['entry_test'] = false;
+            }
         }
 
         if ($request->has('form/ementoring/status')) {
@@ -924,7 +1010,47 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
 
-        $this->refId = $http->has('tracking_tool_ref_id') ? $http->retrieve(
+
+        foreach ($coursesToPrint as $objId => $course) {
+            $objCourseRefId = $this->getCourseRefId($objId);
+
+            $printError = false;
+            $certificateAccess = new ilParticipationCertificateAccess($objCourseRefId);
+
+            if ($certificateAccess->hasCurrentUserPrintAccess()) {
+
+                //$ementoring = (bool) ilParticipationCertificateConfig::getConfig('enable_ementoring', $this->refId);
+
+                $userId = $this->dic->user()->getId();
+
+                $participationCertificatePlugin = ilParticipationCertificatePlugin::getInstance();
+
+                $userData = ilPartCertUsersData::getData($participationCertificatePlugin, [$userId]);
+
+                $twigParser = new ilParticipationCertificateTwigParser(
+                    $objCourseRefId,
+                    [],
+                    [$userId],
+                    $eMentoring,
+                    false
+                );
+
+                $twigParser->parseData($objCourseRefId);
+            } else {
+                $printError = true;
+                continue;
+                // TODO test it
+
+            }
+        }
+
+        /*if ($printError) {
+            $this->tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
+            $this->dic->ctrl()->redirectToURL('login.php');
+        }*/
+
+
+        /*$this->refId = $http->has('tracking_tool_ref_id') ? $http->retrieve(
             'tracking_tool_ref_id',
             $refinery->kindlyTo()->string()
         ) : null;
@@ -955,7 +1081,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             // TODO test it
             $this->tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
             $this->dic->ctrl()->redirectToURL('login.php');
-        }
+        }*/
     }
 
     /**
@@ -1133,6 +1259,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         return $data;
     }
 
+    /**
+     * @param int $objId
+     * @return array
+     */
     public static function getDataEntryTest(int $objId): array
     {
         global $DIC;
@@ -1148,6 +1278,39 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $data = [];
         while ($row = $ilDB->fetchAssoc($result)) {
             $data = $row;
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param int $userId
+     * @return array
+     */
+    public static function getUserCourses(int $userId): array
+    {
+        global $DIC;
+        $ilDB = $DIC->database();
+
+        $courses = CourseConfig::get();
+        $courseObjIds = array_map(function($config) {
+            return $config->getCourseObjId();
+        }, $courses);
+
+        $uniqueCourseObjIds = array_values(array_unique($courseObjIds));
+
+        $in = $ilDB->in('obj_id', $uniqueCourseObjIds, false, 'integer');
+
+        $result = $ilDB->queryF(
+            "SELECT * FROM obj_members
+              WHERE usr_id = %s AND $in AND member = 1",
+            ['integer'],
+            [$userId]
+        );
+
+        $data = [];
+        while ($row = $ilDB->fetchAssoc($result)) {
+            $data[] = $row;
         }
 
         return $data;
