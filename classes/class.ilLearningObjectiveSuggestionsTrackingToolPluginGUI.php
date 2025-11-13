@@ -902,7 +902,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $request = $this->dic->http()->wrapper()->post();
         $eMentoring = false;
 
-
         if ($request->has('form/user_data/firstname')) {
             $firstname = $request->retrieve(
                 'form/user_data/firstname',
@@ -1010,7 +1009,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
 
-
         foreach ($coursesToPrint as $objId => $course) {
             $objCourseRefId = $this->getCourseRefId($objId);
 
@@ -1035,7 +1033,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     false
                 );
 
-                $twigParser->parseData($objCourseRefId);
+                $twigParser->parseData(
+                    $objCourseRefId,
+                    $course['suggested_courses'],
+                    $course['additional_offer'],
+                    $course['entry_test'],
+                );
             } else {
                 $printError = true;
                 continue;
