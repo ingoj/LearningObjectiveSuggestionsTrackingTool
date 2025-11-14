@@ -8,6 +8,14 @@ use Twig\Error\SyntaxError;
 use setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException;
 use setasign\Fpdi\PdfParser\PdfParserException;
 use setasign\Fpdi\PdfParser\Type\PdfTypeException;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveResult;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjective;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\User\User;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Config\CourseConfigProvider;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\User\StudyProgramQuery;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Calculation\CalculateScoresAndSuggestions;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Log\Log;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Config\ConfigProvider;
 
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
@@ -106,13 +114,17 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $properties = $this->getProperties();
 
         $field = $this->factory->input()->field();
-        $input_ref_id = $field->text($this->plugin->txt('ref_id'))
+        $inputRefId = $field->text($this->plugin->txt('ref_id'))
                               ->withValue($properties['ref_id'] ?? '');
+
+        $inputEntryTest = $field->checkbox($this->plugin->txt('entry_test_display'))
+                            ->withValue(!empty($properties['entry_test']));
 
         $form = $this->factory->input()->container()->form()->standard(
             $DIC->ctrl()->getFormAction($this, 'update'),
             [
-                'ref_id' => $input_ref_id
+                'ref_id' => $inputRefId,
+                'entry_test' => $inputEntryTest
             ]
         );
 
@@ -158,8 +170,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $tpl = $DIC->ui()->mainTemplate();
         $form = $this->buildConfigForm();
         $formRequest = $form->withRequest($DIC->http()->request());
+        $formData = $formRequest->getData();
 
-        $refId = (int) $formRequest->getData()['ref_id'];
+        $refId = (int) $formData['ref_id'];
+        $entryTest = $formData['entry_test'];
 
         if ($form->getError()) {
             $this->tpl->setOnScreenMessage('failure', $this->plugin->txt('error'));
@@ -172,6 +186,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
         $properties = $this->getProperties();
         $properties['ref_id'] = $refId;
+        $properties['entry_test'] = $entryTest;
 
         if ($this->updateElement($properties)) {
             $tpl->setOnScreenMessage('success', $this->plugin->txt('updated_success'), true);
@@ -221,16 +236,56 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $userId = $DIC->user()->getId();
         $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
 
-        // TODO
-        $entryTest = [];
-        if (!empty($a_properties['ref_id'])) {
-            $courseObjId = ilObjCourse::_lookupObjectId($a_properties['ref_id']);
-            $entryTest = $this->getDataEntryTest($courseObjId);
-        }
+        $learningObjectivesNotRecommended = $this->getNotRecommendedLearningModules($userId, (int) $a_properties['ref_id'] ?? null);
 
-        $this->buildAccordionHtml($learningObjectives, $userId, $a_properties['ref_id'] ?? null);
+        $this->buildAccordionHtml(
+            $learningObjectives,
+            $learningObjectivesNotRecommended,
+            $userId,
+            $a_properties['ref_id'] ?? null,
+            (bool) $a_properties['entry_test']
+        );
+
 
         return $this->tpl->get();
+    }
+
+    /**
+     * @param int $userId
+     * @param int $courseRefId
+     * @return array
+     */
+    private function getNotRecommendedLearningModules(int $userId, int $courseRefId): array
+    {
+        $course = new SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveCourse(new ilObjCourse($courseRefId, true));
+
+        $config = new CourseConfigProvider($course);
+
+
+        $calculation = new CalculateScoresAndSuggestions(
+            $this->dic->database(),
+            new ConfigProvider(),
+            new Log()
+        );
+
+        $user = new User(new ilObjUser($userId));
+        $set = $this->dic->database()->query($calculation->getSQL($course, $user));
+
+        $studyProgramQuery = new StudyProgramQuery($config);
+        $studyProgram = $studyProgramQuery->getByUser($user);
+        $learningObjectivesNotRecommended = [];
+
+
+        while ($row = $this->dic->database()->fetchObject($set)) {
+            $objective = $calculation->getLearningObjective($course, $row->objective_id);
+            $weightRough = $config->getWeightRough($objective, $studyProgram);
+
+            if ((int) $weightRough === 0) {
+                $learningObjectivesNotRecommended[] = $objective;
+            }
+        }
+
+        return $learningObjectivesNotRecommended;
     }
 
     /**
@@ -567,15 +622,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @param array       $learningObjectives
+     * @param array       $learningObjectivesNotRecommended
      * @param int         $userId
      * @param string|null $propertiesRefId
+     * @param bool        $propertiesEntryTest
      * @return void
      * @throws ilCtrlException
      */
     private function buildAccordionHtml(
         array $learningObjectives,
+        array $learningObjectivesNotRecommended,
         int $userId,
-        ?string $propertiesRefId = null
+        ?string $propertiesRefId = null,
+        bool $propertiesEntryTest = false
     ): void {
         global $DIC;
 
@@ -704,6 +763,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
         $html .= '</div>';
 
+        if (!empty($propertiesRefId)) {
+            $courseObjId = ilObjCourse::_lookupObjectId($propertiesRefId);
+
+            if ($propertiesEntryTest) {
+                $html .= $this->buildInitialTestButton($courseObjId, $userId);
+            }
+        }
+
         $this->refId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
 
         if (!empty($this->refId)) {
@@ -720,6 +787,30 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             );
         }
         $this->setTemplateBlock($html, $propertiesRefId);
+    }
+
+    /**
+     * @param int $courseObjId
+     * @param int $userId
+     * @return string
+     * @throws ilCtrlException
+     */
+    private function buildInitialTestButton(
+        int $courseObjId,
+        int $userId
+    ): string {
+        $entryTest = $this->getDataEntryTest($courseObjId);
+        $testObjId = ilObject::_lookupObjId($entryTest['itest']);
+        $testId = ilObjTest::_getTestIDFromObjectID($testObjId);
+
+        $activeId = ilObjTest::_getActiveIdOfUser(
+            $userId, $testId
+        );
+
+        $linkEntryTestResults = $this->buildEntryTestResultsLink((int) $entryTest['itest'], (int) $activeId);
+        $entryTestLink = $this->factory->link()->standard($this->pl->txt('entry_test'), $linkEntryTestResults);
+
+        return $this->renderer->render($entryTestLink);
     }
 
     /**
@@ -879,6 +970,38 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         return $this->ctrl->getLinkTargetByClass(
             [ilRepositoryGUI::class, ilObjCategoryGUI::class],
             'view'
+        );
+    }
+
+    /**
+     * @param int $entryTestReId
+     * @param int $activeId
+     * @return string
+     * @throws ilCtrlException
+     */
+    private function buildEntryTestResultsLink(
+        int $entryTestReId,
+        int $activeId
+    ): string {
+        $this->ctrl->setParameterByClass(
+            'ilTestEvaluationGUI',
+            'active_ids',
+            $activeId
+        );
+
+        $this->ctrl->setParameterByClass(
+            'ilTestEvaluationGUI',
+            'ref_id',
+            $entryTestReId
+        );
+
+        return $this->ctrl->getLinkTargetByClass(
+            [
+                ilRepositoryGUI::class,
+                ilObjTestGUI::class,
+                ilTestEvaluationGUI::class
+            ],
+            'showResults'
         );
     }
 
@@ -1097,6 +1220,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $weights = getFineWeights::getData();
         $suggs = getLearnSuggs::getData($userId);
         $sorting = [];
+
         foreach ($scores as $score) {
 
             $fine = 1;
