@@ -233,20 +233,20 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $this->pluginTemplate();
 
-        $userId = $DIC->user()->getId();
-        $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
+        if (!empty($a_properties)) {
+            $userId = $DIC->user()->getId();
+            $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
 
-        $learningObjectivesNotRecommended = $this->getNotRecommendedLearningModules($userId, (int) $a_properties['ref_id'] ?? null);
+            $learningObjectivesNotRecommended = $this->getNotRecommendedLearningModules($userId, (int) $a_properties['ref_id'] ?? null);
 
-        $this->buildAccordionHtml(
-            $learningObjectives,
-            $learningObjectivesNotRecommended,
-            $userId,
-            $a_properties['ref_id'] ?? null,
-            (bool) $a_properties['entry_test']
-        );
-
-
+            $this->buildAccordionHtml(
+                $learningObjectives,
+                $learningObjectivesNotRecommended,
+                $userId,
+                $a_properties['ref_id'] ?? null,
+                (bool) $a_properties['entry_test']
+            );
+        }
         return $this->tpl->get();
     }
 
