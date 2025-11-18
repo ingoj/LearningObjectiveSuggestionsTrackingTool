@@ -237,14 +237,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $userId = $DIC->user()->getId();
             $learningObjectives = $this->getTrackingToolLearningObjectives((string) $userId, $a_properties['ref_id'] ?? null);
 
-            $learningObjectivesNotRecommended = $this->getNotRecommendedLearningModules($userId, (int) $a_properties['ref_id'] ?? null);
+            $notRecommendedLearningObjectives = $this->getNotRecommendedLearningModules($userId, (int) $a_properties['ref_id'] ?? null);
 
             $this->buildAccordionHtml(
                 $learningObjectives,
-                $learningObjectivesNotRecommended,
+                $notRecommendedLearningObjectives,
                 $userId,
                 $a_properties['ref_id'] ?? null,
-                (bool) $a_properties['entry_test']
+                isset($a_properties['entry_test']) && (bool) $a_properties['entry_test']
             );
         }
         return $this->tpl->get();
@@ -260,7 +260,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $course = new SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveCourse(new ilObjCourse($courseRefId, true));
 
         $config = new CourseConfigProvider($course);
-
 
         $calculation = new CalculateScoresAndSuggestions(
             $this->dic->database(),
@@ -279,7 +278,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         while ($row = $this->dic->database()->fetchObject($set)) {
             $objective = $calculation->getLearningObjective($course, $row->objective_id);
             $weightRough = $config->getWeightRough($objective, $studyProgram);
-
             if ((int) $weightRough === 0) {
                 $learningObjectivesNotRecommended[] = $objective;
             }
@@ -395,7 +393,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
 
         $modal = $this->factory->modal()->roundtrip(
-            $this->pl->txt('modal_title_1'),
+            $this->pl->txt('print_certificate'),
             [
                 $this->factory->messageBox()->info('Something.')
             ],
@@ -446,8 +444,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @param string|null $refId
      * @return array
      */
-    private function getTrackingToolLearningObjectives(string $userId, ?string $refId = null): array
-    {
+    private function getTrackingToolLearningObjectives(
+        string $userId,
+        ?string $refId = null
+    ): array {
         $sorted = $this->sortByScore($userId);
 
         $learningObjectives = [];
@@ -554,7 +554,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
             }
         }
-
         return $trackingToolData;
     }
 
@@ -565,6 +564,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function getLearningObjectives(array $sorted, array $finalTestsStatesUser): array
     {
+
         $learningObjectives = [];
         foreach ($sorted as $sort_key => $sort_arr) {
 
@@ -585,6 +585,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
             }
         }
+
         return $learningObjectives;
     }
 
@@ -767,15 +768,17 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $courseObjId = ilObjCourse::_lookupObjectId($propertiesRefId);
 
             if ($propertiesEntryTest) {
-                $html .= $this->buildInitialTestButton($courseObjId, $userId);
+                $html .= '<div class="container-initial-test-button">' . $this->buildInitialTestButton($courseObjId, $userId) . '</div>';
             }
         }
 
         $this->refId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
 
+        $htmlNotRecommended = $this->getHtmlForNotRecommended(
+            $learningObjectivesNotRecommended
+        );
+
         if (!empty($this->refId)) {
-
-
             $this->ctrl->setParameterByClass(
                 self::class,
                 'tracking_tool_ref_id',
@@ -786,7 +789,43 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 component: [$this->getModal()]
             );
         }
-        $this->setTemplateBlock($html, $propertiesRefId);
+
+        $this->setTemplateBlock($html, $htmlNotRecommended, $propertiesRefId);
+    }
+
+    /**
+     * @param array $learningObjectivesNotRecommended
+     * @return string
+     * @throws ilCtrlException
+     */
+    private function getHtmlForNotRecommended(
+        array $learningObjectivesNotRecommended
+    ): string {
+
+
+        // TODO
+        /*$this->setRefIdAsClassParameter($courseRefId);
+        $courseLink = $this->getCourseLink();*/
+
+        $notRecommended = [];
+        foreach ($learningObjectivesNotRecommended as $learningObjective) {
+            /* @var LearningObjective $learningObjective */
+            $notRecommended[] = [
+                'title' => $learningObjective->getTitle()
+            ];
+        }
+        $courseLink = $this->getCourseLink();
+        $html = '<div class="tracking-tool">';
+        foreach ($notRecommended as $objective) {
+            $html .= '<div class="tracking-tool-accordion-item">';
+            $html .= '<span class="learning-objective-title">';
+            $html .= '<a href="' . $courseLink . '">' . $objective['title'] . '</a>';
+            $html .= '</span>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+
+        return $html;
     }
 
     /**
@@ -807,10 +846,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $userId, $testId
         );
 
-        $linkEntryTestResults = $this->buildEntryTestResultsLink((int) $entryTest['itest'], (int) $activeId);
-        $entryTestLink = $this->factory->link()->standard($this->pl->txt('entry_test'), $linkEntryTestResults);
+        if(!empty($activeId)) {
+            $linkEntryTestResults = $this->buildEntryTestResultsLink((int) $entryTest['itest'], (int) $activeId);
+            $entryTestLink = $this->factory->link()->standard($this->pl->txt('entry_test'), $linkEntryTestResults);
 
-        return $this->renderer->render($entryTestLink);
+            return $this->renderer->render($entryTestLink);
+        }
+        return '';
     }
 
     /**
@@ -886,28 +928,31 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @param string      $html
+     * @param string      $htmlNotRecommended
      * @param string|null $refId
      * @return void
      * @throws ilCtrlException
      */
     private function setTemplateBlock(
         string $html,
+        string $htmlNotRecommended,
         ?string $refId = null
     ): void {
         $this->tpl->setCurrentBlock('tracking_tool');
-        $this->setVariables($html, $refId);
+        $this->setVariables($html, $htmlNotRecommended, $refId);
         $this->tpl->parseCurrentBlock();
     }
 
     /**
      * @param string      $html
+     * @param string      $htmlNotRecommended
      * @param string|null $refId
      * @return void
      * @throws ilCtrlException
-     * @throws Exception
      */
     private function setVariables(
         string $html,
+        string $htmlNotRecommended,
         ?string $refId = null
     ): void {
         $this->tpl->setVariable('TITLE', $this->pl->txt('title'));
@@ -932,6 +977,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $this->tpl->setVariable('SUGGESTED_COURSES_TITLE', $this->pl->txt('suggested_courses_title'));
         $this->tpl->setVariable('NOT_SUGGESTED_COURSES_TITLE', $this->pl->txt('not_suggested_courses_title'));
+
+        $this->tpl->setVariable('NOT_SUGGESTED_COURSES_HTML', $htmlNotRecommended);
 
 
         $this->tpl->setVariable('LEGENDS_TEXT_LEGENDS', $this->pl->txt('legends_text_legends'));

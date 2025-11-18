@@ -41,11 +41,10 @@
 
 .tracking-tool .tracking-tool-accordion-item {
     background-color: #E3E8EE;
-    border: none;
     color: #516583;
-    margin-top: 50px;
+    margin-top: 20px;
     outline: none;
-    padding: 18px;
+    padding: 5px;
     text-align: left;
     transition: 0.4s;
     width: 100%;
@@ -63,8 +62,8 @@
 .tracking-tool .tracking-tool-tree-icon  {
     cursor: pointer;
     display: inline-block;
-    height: 20px;
-    width: 20px;
+    height: 15px;
+    width: 15px;
 }
 
 .tracking-tool .learning-objective-title  {
@@ -372,4 +371,8 @@
     float: right;
     height: 100px;
     width: 50px;
+}
+
+.container-tracking-tool .container-initial-test-button  {
+    margin-top: 10px;
 }
