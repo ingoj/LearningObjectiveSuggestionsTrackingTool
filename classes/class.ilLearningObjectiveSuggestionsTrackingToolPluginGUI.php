@@ -1127,8 +1127,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     private function printCertificate(): void
     {
         $refinery = $this->dic->refinery();
-        $http = $this->dic->http()->wrapper()->query();
-
         $request = $this->dic->http()->wrapper()->post();
         $eMentoring = false;
 
@@ -1242,21 +1240,16 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $certificateAccess = new ilParticipationCertificateAccess($objCourseRefId);
 
             if ($certificateAccess->hasCurrentUserPrintAccess()) {
-                $userId = $this->dic->user()->getId();
-
-                //$participationCertificatePlugin = ilParticipationCertificatePlugin::getInstance();
-
-                //$userData = ilPartCertUsersData::getData($participationCertificatePlugin, [$userId]);
-
                 $twigParser = new ilParticipationCertificateTwigParser(
                     $objCourseRefId,
                     [],
-                    [$userId],
+                    [$this->userId],
                     $eMentoring,
                     false
                 );
 
                 $twigParser->parseData(
+                    true,
                     $objCourseRefId,
                     $course['suggested_courses'],
                     $course['additional_offer'],
