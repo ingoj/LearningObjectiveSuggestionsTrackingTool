@@ -1211,7 +1211,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $course = $coursesToPrint[$objCourseId];
 
             $twigParser = new ilParticipationCertificateTwigParser(
-                [],
                 $this->getCourseRefId($objCourseId),
                 [$this->userId],
                 $course['ementoring'] ?? false,
@@ -1231,7 +1230,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         } else {
 
             $twigParser = new ilParticipationCertificateTwigParser(
-                [],
                 null,
                 [$this->userId],
                 $course['ementoring'] ?? false,
