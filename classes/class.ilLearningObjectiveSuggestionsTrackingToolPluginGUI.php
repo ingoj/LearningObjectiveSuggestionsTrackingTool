@@ -1189,6 +1189,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             if ($request->has('form/options_' . $course['obj_id'] . '/ementoring_' . $course['obj_id'])) {
                 $coursesToPrint[$course['obj_id']]['ementoring'] = true;
             }
+
+            if (!empty($coursesToPrint[$course['obj_id']])) {
+                $coursesToPrint[$course['obj_id']]['ref_id'] = $this->getCourseRefId($course['obj_id']);
+            }
         }
 
         $coursesToPrint = $this->excludeCoursesWithNoPrintPermission($coursesToPrint);
@@ -1203,38 +1207,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $printError = false;
         if (count(array_keys($coursesToPrint)) === 1) {
-            $objCourseRefId = array_keys($coursesToPrint)[0];
-            $course = $coursesToPrint[$objCourseRefId];
-
-            /*$courseRefId = $this->getCourseRefId($objCourseRefId);
-            $course = $coursesToPrint[$objCourseRefId];
-            $certificateAccess = new ilParticipationCertificateAccess($courseRefId);
-
-            if ($certificateAccess->hasCurrentUserPrintAccess()) {
-                $twigParser = new ilParticipationCertificateTwigParser(
-                    $objCourseRefId,
-                    [],
-                    [$this->userId],
-                    $course['ementoring'],
-                    false,
-                    null,
-                    true
-                );
-
-                $twigParser->parseData(
-                    true,
-                    $objCourseRefId,
-                    isset($course['suggested_courses']),
-                    isset($course['additional_offer']),
-                    isset($course['entry_test']),
-                    $firstname,
-                    $lastname,
-                );
-            }*/
+            $objCourseId = array_keys($coursesToPrint)[0];
+            $course = $coursesToPrint[$objCourseId];
 
             $twigParser = new ilParticipationCertificateTwigParser(
-                $objCourseRefId,
                 [],
+                $this->getCourseRefId($objCourseId),
                 [$this->userId],
                 $course['ementoring'] ?? false,
                 false,
@@ -1244,7 +1222,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $twigParser->parseData(
                 true,
-                $objCourseRefId,
                 isset($course['suggested_courses']),
                 isset($course['additional_offer']),
                 isset($course['entry_test']),
@@ -1254,8 +1231,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         } else {
 
             $twigParser = new ilParticipationCertificateTwigParser(
-                $coursesToPrint,
                 [],
+                null,
                 [$this->userId],
                 $course['ementoring'] ?? false,
                 false,
@@ -1265,49 +1242,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $twigParser->parseDataMultipleCourses(
                 $coursesToPrint,
-                isset($course['suggested_courses']),
-                isset($course['additional_offer']),
-                isset($course['entry_test']),
                 $firstname,
                 $lastname,
             );
-
-            dd($coursesToPrint);
-
-
-
         }
-        dd(array_keys($coursesToPrint));
 
-        foreach ($coursesToPrint as $objId => $course) {
-            $objCourseRefId = $this->getCourseRefId($objId);
-
-
-
-            if ($certificateAccess->hasCurrentUserPrintAccess()) {
-                $twigParser = new ilParticipationCertificateTwigParser(
-                    $objCourseRefId,
-                    [],
-                    [$this->userId],
-                    $eMentoring,
-                    false
-                );
-
-                $twigParser->parseData(
-                    true,
-                    $objCourseRefId,
-                    isset($course['suggested_courses']),
-                    isset($course['additional_offer']),
-                    isset($course['entry_test']),
-                    $firstname,
-                    $lastname,
-                );
-
-            } else {
-                $printError = true;
-                continue;
-            }
-        }
 
         // TODO
         if ($printError) {
