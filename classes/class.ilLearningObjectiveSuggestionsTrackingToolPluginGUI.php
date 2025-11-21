@@ -420,25 +420,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $optionsFields = [];
         foreach ($courses as $course) {
             $checkboxes = [];
-            /*$checkboxes[$course['obj_id']]['course_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
-                ilObjCourse::_lookupTitle($course['obj_id'])
-            )->withDedicatedName('course_' . $course['obj_id']);
-
-            $checkboxes[$course['obj_id']]['course_suggested_courses_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
-                $this->pl->txt('suggested_courses')
-            )->withDedicatedName('course_suggested_courses_' . $course['obj_id']);
-
-            $checkboxes[$course['obj_id']]['course_personalized_additional_offer_' . $course['obj_id'] ] = $this->factory->input()->field()->checkbox(
-                $this->pl->txt('personalized_additional_offer')
-            )->withDedicatedName('course_personalized_additional_offer_'  . $course['obj_id']);
-
-            $checkboxes[$course['obj_id']]['course_entry_test_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
-                $this->pl->txt('entry_test')
-            )->withDedicatedName('course_entry_test_' . $course['obj_id']);*/
-
-            /*$checkboxes['course_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
-                ilObjCourse::_lookupTitle($course['obj_id'])
-            )->withDedicatedName('course_' . $course['obj_id']);*/
 
             $checkboxes['course_suggested_courses_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('suggested_courses')
@@ -453,14 +434,26 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             )->withDedicatedName('course_entry_test_' . $course['obj_id']);
 
 
+            $userCourseRefIds = ilObject::_getAllReferences($course['obj_id']);
+            $userCourseRefId = array_shift($userCourseRefIds);
+
+
+            $eMentoring = (bool) ilParticipationCertificateConfig::getConfig('enable_ementoring', $userCourseRefId);
+            if($eMentoring) {
+                $checkboxes['ementoring_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
+                    $this->pl->txt('ementoring')
+                )->withDedicatedName('ementoring_' . $course['obj_id']);
+            }
+
+
             $sectionCheckboxes = $this->factory->input()->field()->section(
                 $checkboxes,
                 ilObjCourse::_lookupTitle($course['obj_id']),
                 ''
-            )->withDedicatedName('options');
+            )->withDedicatedName('options_'  . $course['obj_id']);
 
 
-            $optionsFields[$course['obj_id']] = $sectionCheckboxes;
+            $optionsFields['course_' . $course['obj_id']] = $sectionCheckboxes;
 
         }
 
@@ -474,10 +467,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $optionsFields['options'][] = $sectionCheckboxes;
         }*/
+
         $fields = array_merge($userFields, $info, $optionsFields);
 
+        /*$eMentoring = (bool) ilParticipationCertificateConfig::getConfig('enable_ementoring', $this->refId);
 
-        $eMentoring = (bool) ilParticipationCertificateConfig::getConfig('enable_ementoring', $this->refId);
 
         if ($eMentoring) {
             $sectionEMentoring = $this->factory->input()->field()->section(
@@ -492,7 +486,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $eMentoringField['ementoring'] = $sectionEMentoring;
             $fields = array_merge($fields, $eMentoringField);
-        }
+        }*/
 
         $modal = $this->factory->modal()->roundtrip(
             $this->pl->txt('print_certificate'),
@@ -1207,41 +1201,21 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $coursesToPrint = [];
         foreach ($courses as $course) {
-            if ($request->has('form/options/course_suggested_courses_' . $course['obj_id'])) {
-                $suggestedCourses = $request->retrieve(
-                    'form/options/course_suggested_courses_' . $course['obj_id'],
-                    $refinery->kindlyTo()->string()
-                );
 
+            if ($request->has('form/options_' . $course['obj_id'] . '/course_suggested_courses_' . $course['obj_id'])) {
                 $coursesToPrint[$course['obj_id']]['suggested_courses'] = true;
             }
 
-            if ($request->has('form/options/course_personalized_additional_offer_' . $course['obj_id'])) {
-                $additionalOffer = $request->retrieve(
-                    'form/options/course_personalized_additional_offer_' . $course['obj_id'],
-                    $refinery->kindlyTo()->string()
-                );
+            if ($request->has('form/options_'  . $course['obj_id'] . '/course_personalized_additional_offer_' . $course['obj_id'])) {
                 $coursesToPrint[$course['obj_id']]['additional_offer'] = true;
             }
 
-            if ($request->has('form/options/course_entry_test_' . $course['obj_id'])) {
-                $entryTest = $request->retrieve(
-                    'form/options/course_entry_test_' . $course['obj_id'],
-                    $refinery->kindlyTo()->string()
-                );
+            if ($request->has('form/options_'  . $course['obj_id'] . '/course_entry_test_' . $course['obj_id'])) {
                 $coursesToPrint[$course['obj_id']]['entry_test'] = true;
             }
-        }
 
-        if ($request->has('form/ementoring/status')) {
-            $eMentoringStatus = $request->retrieve(
-                'form/ementoring/status',
-                $refinery->kindlyTo()->string()
-            );
-
-
-            if ($eMentoringStatus === 'checked') {
-                $eMentoring = true;
+            if ($request->has('form/options_' . $course['obj_id'] . '/ementoring_' . $course['obj_id'])) {
+                $coursesToPrint[$course['obj_id']]['ementoring'] = true;
             }
         }
 
@@ -1253,12 +1227,37 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
 
         $printError = false;
-        // TODO
+        if (count(array_keys($coursesToPrint)) === 1) {
+            $objCourseRefId = array_keys($coursesToPrint)[0];
+            $course = $coursesToPrint[$objCourseRefId];
+            $certificateAccess = new ilParticipationCertificateAccess($objCourseRefId);
+
+            $twigParser = new ilParticipationCertificateTwigParser(
+                $objCourseRefId,
+                [],
+                [$this->userId],
+                $course['ementoring'],
+                false,
+                null,
+                true
+            );
+
+            $twigParser->parseData(
+                true,
+                $objCourseRefId,
+                isset($course['suggested_courses']),
+                isset($course['additional_offer']),
+                isset($course['entry_test']),
+                $firstname,
+                $lastname,
+            );
+        }
+        dd(array_keys($coursesToPrint));
+
         foreach ($coursesToPrint as $objId => $course) {
             $objCourseRefId = $this->getCourseRefId($objId);
 
 
-            $certificateAccess = new ilParticipationCertificateAccess($objCourseRefId);
 
             if ($certificateAccess->hasCurrentUserPrintAccess()) {
                 $twigParser = new ilParticipationCertificateTwigParser(
@@ -1278,6 +1277,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     $firstname,
                     $lastname,
                 );
+
             } else {
                 $printError = true;
                 continue;
