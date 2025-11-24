@@ -18,6 +18,7 @@ use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Config\ConfigProvider;
 use ILIAS\DI\Container;
 use ILIAS\UI\Factory;
 use ILIAS\UI\Renderer;
+use ILIAS\Container\InternalDomainService;
 
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
@@ -40,11 +41,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     private Renderer $renderer;
 
-    private ?int $refId = null;
+    private int $containerRefId;
 
     private int $userId;
 
-
+    /**
+     * @throws ilCtrlException
+     */
     public function __construct()
     {
         global $DIC;
@@ -57,6 +60,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->factory = $this->dic->ui()->factory();
         $this->renderer = $this->dic->ui()->renderer();
         $this->userId = $DIC->user()->getId();
+
+
+        if (isset($_GET['ref_id'])) {
+            $this->containerRefId = $this->fetchUrlParameter('ref_id', FILTER_SANITIZE_NUMBER_INT);
+        } else {
+            $this->containerRefId = $this->fetchUrlParameter('container_ref_id', FILTER_SANITIZE_NUMBER_INT);
+        }
+
+        $this->ctrl->setParameterByClass(
+            self::class,
+            'container_ref_id',
+            $this->containerRefId
+        );
     }
 
     /**
@@ -67,6 +83,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function executeCommand(): void
     {
+        $this->ctrl->setParameterByClass(
+            self::class,
+            'container_ref_id',
+            $this->containerRefId
+        );
+
         $cmd = $this->ctrl->getCmd();
 
         $commands = [
@@ -738,7 +760,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
 
-        $this->refId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
+        $courseRefId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
 
         $htmlNotSuggestedCourses = $this->getAccordionHtml(
             $learningObjectivesNotRecommended,
@@ -746,11 +768,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $lastVisitedObjId,
         );
 
-        if (!empty($this->refId)) {
+        if (!empty($courseRefId)) {
             $this->ctrl->setParameterByClass(
                 self::class,
                 'tracking_tool_ref_id',
-                $this->refId
+                $courseRefId
             );
 
             $htmlNotSuggestedCourses .= $this->renderer->render(
@@ -1226,7 +1248,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 isset($course['entry_test']),
                 $firstname,
                 $lastname,
+                $this->containerRefId
             );
+
         } else {
 
             $twigParser = new ilParticipationCertificateTwigParser(
@@ -1238,10 +1262,17 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 true
             );
 
+            /*$countIndividualAssessment = 0;
+            $countCompletedIndividualAssessment = 0;
+            $this->individualAssessments($countIndividualAssessment, $countCompletedIndividualAssessment);*/
+
             $twigParser->parseDataMultipleCourses(
                 $coursesToPrint,
                 $firstname,
                 $lastname,
+                $this->containerRefId
+                /*$countIndividualAssessment,
+                $countCompletedIndividualAssessment*/
             );
         }
 
@@ -1251,6 +1282,133 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $this->tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
             $this->dic->ctrl()->redirectToURL('login.php');
         }
+    }
+
+    /**
+     * @param int $countIndividualAssessment
+     * @param int $countCompletedIndividualAssessment
+     * @return void
+     * @throws ilDatabaseException
+     * @throws ilObjectNotFoundException
+     */
+    private function individualAssessments(int &$countIndividualAssessment, int &$countCompletedIndividualAssessment): void
+    {
+        // TODO Find all groups => find the parent container of them => then check if assessment belongs on this => get data
+        $domain = $this->dic->container()
+                            ->internal()
+                            ->domain();
+
+        $containerItemsRefIds = $this->getContainerObjects($domain);
+
+        // TODO Ask if container has only one group and the group only one individual assessment
+        $containerGroupsRefIds = $this->getContainerGroups($containerItemsRefIds);
+        $individualAssessments = $this->getGroupIndividualAssessments($containerGroupsRefIds, $domain);
+
+        $countIndividualAssessment = 0;
+        $countCompletedIndividualAssessment = 0;
+        foreach ($individualAssessments as $groupRefId => $groupIndividualAssessment) {
+
+            foreach ($groupIndividualAssessment as $individualAssessment) {
+                $objIndividualAssessment = new ilObjIndividualAssessment($individualAssessment['ref_id']);
+                $storage = $objIndividualAssessment->membersStorage();
+                $individualAssessmentMembers = $storage->loadMembers($objIndividualAssessment);
+                $userIndividualAssessment = $individualAssessmentMembers->current();
+
+                if (is_array($userIndividualAssessment)) {
+                    $countIndividualAssessment++;
+
+                    if ($userIndividualAssessment['learning_progress'] === LearningObjectiveSuggestionsTrackingToolConstants::STATUS_COMPLETED_INDIVIDUAL_ASSESSEMENTS) {
+                        $countCompletedIndividualAssessment++;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param InternalDomainService $domain
+     * @return array
+     * @throws ilDatabaseException
+     * @throws ilObjectNotFoundException
+     */
+    private function getContainerObjects(InternalDomainService $domain): array
+    {
+        $containerObjectFactory = \ilObjectFactory::getInstanceByRefId($this->containerRefId);
+
+        $itemPresentation = $domain
+            ->content()
+            ->itemPresentation(
+                $containerObjectFactory, // TODO replace it with container ???
+                null,
+                false
+            );
+
+
+        if ($itemPresentation->hasItems()) {
+            return $itemPresentation->getAllRefIds();
+        }
+        return [];
+
+    }
+
+    /**
+     * @param array $containerItemsRefIds
+     * @return array
+     * @throws ilDatabaseException
+     * @throws ilObjectNotFoundException
+     */
+    private function getContainerGroups(array $containerItemsRefIds): array
+    {
+        $groupRefIds = [];
+        foreach ($containerItemsRefIds as $key => $containerItemRefId) {
+            $itemObject = \ilObjectFactory::getInstanceByRefId($containerItemRefId);
+
+            if ($itemObject->getType() === 'grp') {
+                $groupRefIds[] = $containerItemRefId;
+            }
+        }
+        return $groupRefIds;
+    }
+
+    /**
+     * @param array $containerGroupsRefIds
+     * @param       $domain
+     * @return array
+     * @throws ilDatabaseException
+     * @throws ilObjectNotFoundException
+     */
+    private function getGroupIndividualAssessments(
+        array $containerGroupsRefIds,
+        $domain
+    ): array {
+        $individualAssessments = [];
+        foreach ($containerGroupsRefIds as $key => $containerGroupRefId) {
+            $groupObjectFactory = \ilObjectFactory::getInstanceByRefId($containerGroupRefId);
+
+            $items = $domain
+                ->content()
+                ->itemPresentation(
+                    $groupObjectFactory,
+                    null,
+                    false
+                );
+
+            $groupItems[$containerGroupRefId] = $items->getAllRefIds();
+
+            foreach ($groupItems as $groupItemsRefIds) {
+                foreach ($groupItemsRefIds as $groupItemRefId) {
+                    $groupItemObject = \ilObjectFactory::getInstanceByRefId($groupItemRefId);
+
+                    if ($groupItemObject->getType() === 'iass') {
+                        $individualAssessments[$containerGroupRefId][] = [
+                            'ref_id' => $groupItemObject->getRefId(),
+                            'obj_id' => $groupItemObject->getId()
+                        ];
+                    }
+                }
+            }
+        }
+        return $individualAssessments;
     }
 
     /**
