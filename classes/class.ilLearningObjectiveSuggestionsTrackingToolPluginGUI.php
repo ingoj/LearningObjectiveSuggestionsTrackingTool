@@ -60,19 +60,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->factory = $this->dic->ui()->factory();
         $this->renderer = $this->dic->ui()->renderer();
         $this->userId = $DIC->user()->getId();
-
-
-        if (isset($_GET['ref_id'])) {
-            $this->containerRefId = $this->fetchUrlParameter('ref_id', FILTER_SANITIZE_NUMBER_INT);
-        } else {
-            $this->containerRefId = $this->fetchUrlParameter('container_ref_id', FILTER_SANITIZE_NUMBER_INT);
-        }
-
-        $this->ctrl->setParameterByClass(
-            self::class,
-            'container_ref_id',
-            $this->containerRefId
-        );
     }
 
     /**
@@ -83,12 +70,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     public function executeCommand(): void
     {
-        $this->ctrl->setParameterByClass(
-            self::class,
-            'container_ref_id',
-            $this->containerRefId
-        );
-
         $cmd = $this->ctrl->getCmd();
 
         $commands = [
@@ -414,7 +395,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $hiddenLastnameField = $this->factory->input()->field()->hidden()
                                               ->withDedicatedName('hidden_lastname')
-                                              ->withValue($firstname ?? '');
+                                              ->withValue($lastname ?? '');
 
         $sectionUserData = $this->factory->input()->field()->section(
             [
@@ -1146,7 +1127,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     {
         $refinery = $this->dic->refinery();
         $request = $this->dic->http()->wrapper()->post();
-        $eMentoring = false;
 
         $firstname = '';
         if ($request->has('form/user_data/firstname')) {
@@ -1241,6 +1221,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 true
             );
 
+            $this->containerRefId = $this->dic->repositoryTree()->getParentId($this->getCourseRefId($objCourseId));
+
             $twigParser->parseData(
                 true,
                 isset($course['suggested_courses']),
@@ -1262,17 +1244,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 true
             );
 
-            /*$countIndividualAssessment = 0;
-            $countCompletedIndividualAssessment = 0;
-            $this->individualAssessments($countIndividualAssessment, $countCompletedIndividualAssessment);*/
-
             $twigParser->parseDataMultipleCourses(
                 $coursesToPrint,
                 $firstname,
                 $lastname,
-                $this->containerRefId
-                /*$countIndividualAssessment,
-                $countCompletedIndividualAssessment*/
+                $this->dic->user()->getId(),
             );
         }
 
