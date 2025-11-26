@@ -29,6 +29,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 {
     const CMD_PRINT_CERTIFICATE = 'printCertificate';
 
+    const CMD_CREATE = 'create';
+
+    const CMD_EDIT = 'edit';
+
+    const CMD_UPDATE = 'update';
+
+    const CMD_CANCEL = 'cancel';
+
     private $tpl;
 
     private Container $dic;
@@ -40,8 +48,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     private Factory $factory;
 
     private Renderer $renderer;
-
-    private int $containerRefId;
 
     private int $userId;
 
@@ -73,11 +79,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $cmd = $this->ctrl->getCmd();
 
         $commands = [
-            'create',
-            'update',
-            'edit',
-            'cancel',
-            'printCertificate'
+            self::CMD_CREATE,
+            self::CMD_UPDATE,
+            self::CMD_EDIT,
+            self::CMD_CANCEL,
+            self::CMD_PRINT_CERTIFICATE
         ];
         if (in_array($cmd, $commands)) {
             $this->$cmd();
@@ -368,7 +374,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     {
         $modalFormAction = $this->ctrl->getLinkTargetByClass(
             [ilUIPluginRouterGUI::class, ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class],
-            'printCertificate'
+            self::CMD_PRINT_CERTIFICATE
         );
 
         $participationCertificatePlugin = ilParticipationCertificatePlugin::getInstance();
@@ -1212,8 +1218,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $objCourseId = array_keys($coursesToPrint)[0];
             $course = $coursesToPrint[$objCourseId];
 
+            $groupRefId = ParticipationCertificateHelper::getGroupRefId($this->getCourseRefId($objCourseId));
+
             $twigParser = new ilParticipationCertificateTwigParser(
-                $this->getCourseRefId($objCourseId),
+                $groupRefId,
                 [$this->userId],
                 $course['ementoring'] ?? false,
                 false,
@@ -1221,16 +1229,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 true
             );
 
-            $this->containerRefId = $this->dic->repositoryTree()->getParentId($this->getCourseRefId($objCourseId));
-
             $twigParser->parseData(
                 true,
+                $groupRefId,
                 isset($course['suggested_courses']),
                 isset($course['additional_offer']),
                 isset($course['entry_test']),
                 $firstname,
-                $lastname,
-                $this->containerRefId
+                $lastname
             );
 
         } else {
@@ -1243,6 +1249,17 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 null,
                 true
             );
+
+            $domain = $this->dic->container()
+                                ->internal()
+                                ->domain();
+
+            foreach ($coursesToPrint as $key => $course) {
+                $courseContainerId = $this->dic->repositoryTree()->getParentId($course['ref_id']);
+                $groupRefId = $this->getGroupOfContainer($courseContainerId, $domain);
+                $coursesToPrint[$key]['group_id'] = $groupRefId;
+            }
+
 
             $twigParser->parseDataMultipleCourses(
                 $coursesToPrint,
@@ -1302,14 +1319,18 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
+     * @param int                   $containerRefId
      * @param InternalDomainService $domain
-     * @return array
+     * @return int|null
      * @throws ilDatabaseException
      * @throws ilObjectNotFoundException
      */
-    private function getContainerObjects(InternalDomainService $domain): array
-    {
-        $containerObjectFactory = \ilObjectFactory::getInstanceByRefId($this->containerRefId);
+
+    public function getGroupOfContainer(
+        int $containerRefId,
+        $domain
+    ): int|null {
+        $containerObjectFactory = \ilObjectFactory::getInstanceByRefId($containerRefId);
 
         $itemPresentation = $domain
             ->content()
@@ -1319,12 +1340,18 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 false
             );
 
+        $items = $itemPresentation->getAllRefIds();
+        $groupRefId = null;
+        foreach ($items as $key => $itemRefId) {
+            $itemObject = \ilObjectFactory::getInstanceByRefId($itemRefId);
 
-        if ($itemPresentation->hasItems()) {
-            return $itemPresentation->getAllRefIds();
+            if ($itemObject->getType() === 'grp') {
+                $groupRefId = (int) $itemRefId;
+
+                break;
+            }
         }
-        return [];
-
+        return $groupRefId;
     }
 
     /**
