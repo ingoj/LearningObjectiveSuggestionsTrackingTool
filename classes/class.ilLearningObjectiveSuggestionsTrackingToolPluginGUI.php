@@ -236,7 +236,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->pluginTemplate();
 
         if (!empty($a_properties)) {
-            $userId = $DIC->user()->getId();
             $learningObjectives = $this->getTrackingToolLearningObjectives($a_properties['ref_id'] ?? null);
 
             $notRecommendedLearningObjectives = $this->getNotRecommendedLearningModules((int) $a_properties['ref_id'] ?? null);
@@ -462,7 +461,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     ''
                 )->withDedicatedName('options_'  . $course['obj_id']);
 
-
                 $optionsFields['course_' . $course['obj_id']] = $sectionCheckboxes;
             }
         }
@@ -470,9 +468,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $modal = $this->factory->modal()->roundtrip(
             $this->pl->txt('print_certificate'),
-            [
-                $this->factory->messageBox()->info('Something.')
-            ],
+            [],
             $fields,
             $modalFormAction
         )->withDedicatedName('tracking-tool-modal')
@@ -695,6 +691,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @param bool        $propertiesEntryTest
      * @return void
      * @throws ilCtrlException
+     * @throws Exception
      */
     private function buildAccordionHtml(
         array $learningObjectives,
@@ -755,16 +752,22 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $lastVisitedObjId,
         );
 
-        if (!empty($courseRefId)) {
-            $this->ctrl->setParameterByClass(
-                self::class,
-                'tracking_tool_ref_id',
-                $courseRefId
-            );
 
-            $htmlNotSuggestedCourses .= $this->renderer->render(
-                component: [$this->getModal()]
-            );
+        if (!empty($courseRefId)) {
+            $certificateAccess = new ilParticipationCertificateAccess($courseRefId);
+
+
+            if ($certificateAccess->isSelfPrintEnabled()) {
+                $this->ctrl->setParameterByClass(
+                    self::class,
+                    'tracking_tool_ref_id',
+                    $courseRefId
+                );
+
+                $htmlNotSuggestedCourses .= $this->renderer->render(
+                    component: [$this->getModal()]
+                );
+            }
         }
 
         $this->setTemplateBlock($htmlSuggestedCourses, $htmlNotSuggestedCourses, $propertiesRefId);
@@ -1010,6 +1013,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @param string|null $refId
      * @return void
      * @throws ilCtrlException
+     * @throws Exception
      */
     private function setVariables(
         string $htmlSuggestedCourses,
@@ -1024,16 +1028,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         if(!empty($refId)) {
             $certificateAccess = new ilParticipationCertificateAccess($refId);
-            $printButtonCssClass = 'print-button';
+            $printButton = '';
             if($certificateAccess->isSelfPrintEnabled()) {
-                $printButtonCssClass .= '-visible';
-            } else {
-                $printButtonCssClass .= '-hidden';
+                $printLink = $this->buildPrintLink($refId);
+                $printButton = '<a href="' . $printLink . '" class="print-button-visible">';
+                $printButton .= '<img src="Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool/templates/images/icon_file.svg" class="icon-file">';
+                $printButton .= '</a>';
             }
-
-            $this->tpl->setVariable('PRINT_BUTTON_CLASS', $printButtonCssClass);
-            $printLink = $this->buildPrintLink($refId);
-            $this->tpl->setVariable('PRINT_BUTTON_LINK', $printLink);
+            $this->tpl->setVariable('PRINT_BUTTON', $printButton);
         }
 
         $templateVariables = [
@@ -1180,17 +1182,19 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $courses = $this->getUserCourses($userId);
 
         $coursesToPrint = [];
+        $printError = false;
         foreach ($courses as $course) {
-
             if ($request->has('form/options_' . $course['obj_id'] . '/course_suggested_courses_' . $course['obj_id'])) {
                 $coursesToPrint[$course['obj_id']]['suggested_courses'] = true;
             }
 
-            if ($request->has('form/options_'  . $course['obj_id'] . '/course_personalized_additional_offer_' . $course['obj_id'])) {
+            if ($request->has(
+                'form/options_' . $course['obj_id'] . '/course_personalized_additional_offer_' . $course['obj_id']
+            )) {
                 $coursesToPrint[$course['obj_id']]['additional_offer'] = true;
             }
 
-            if ($request->has('form/options_'  . $course['obj_id'] . '/course_entry_test_' . $course['obj_id'])) {
+            if ($request->has('form/options_' . $course['obj_id'] . '/course_entry_test_' . $course['obj_id'])) {
                 $coursesToPrint[$course['obj_id']]['entry_test'] = true;
             }
 
@@ -1203,6 +1207,22 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
 
+        foreach ($coursesToPrint as $course) {
+            $certificateAccess = new ilParticipationCertificateAccess($course['ref_id']);
+
+            if (!$certificateAccess->isSelfPrintEnabled()) {
+                $printError = true;
+            }
+        }
+
+        if ($printError) {
+            $tpl = $this->dic->ui()->mainTemplate();
+            $tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
+            $this->ctrl->redirectByClass(
+                [ilRepositoryGUI::class, ilObjCategoryGUI::class]
+            );
+        }
+
         $coursesToPrint = $this->excludeCoursesWithNoPrintPermission($coursesToPrint);
 
         if (empty($coursesToPrint)) {
@@ -1213,15 +1233,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
 
 
-        $printError = false;
+
+
         if (count(array_keys($coursesToPrint)) === 1) {
             $objCourseId = array_keys($coursesToPrint)[0];
             $course = $coursesToPrint[$objCourseId];
 
-            $groupRefId = ParticipationCertificateHelper::getGroupRefId($this->getCourseRefId($objCourseId));
-
             $twigParser = new ilParticipationCertificateTwigParser(
-                $groupRefId,
+                $course['ref_id'],
                 [$this->userId],
                 $course['ementoring'] ?? false,
                 false,
@@ -1231,7 +1250,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
             $twigParser->parseData(
                 true,
-                $groupRefId,
+                $course['ref_id'],
                 isset($course['suggested_courses']),
                 isset($course['additional_offer']),
                 isset($course['entry_test']),
@@ -1267,13 +1286,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $lastname,
                 $this->dic->user()->getId(),
             );
-        }
-
-
-        // TODO
-        if ($printError) {
-            $this->tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
-            $this->dic->ctrl()->redirectToURL('login.php');
         }
     }
 
