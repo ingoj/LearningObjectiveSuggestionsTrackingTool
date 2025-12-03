@@ -461,11 +461,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             }
         }
         if (!empty($coursesWithActivatedEMentoring)) {
-            $checkboxEmentoring = $this->factory->input()->field()->checkbox(
+            $optionsFields['ementoring'] = $this->factory->input()->field()->checkbox(
                 $this->pl->txt('ementoring')
             )->withDedicatedName('ementoring');
 
-            $optionsFields['ementoring'] = $checkboxEmentoring;
+            $optionsFields['homework'] = $this->factory->input()->field()->checkbox(
+                $this->pl->txt('homework')
+            )->withDedicatedName('homework');
         }
         $fields = array_merge($userFields, $info, $optionsFields);
 
@@ -1181,10 +1183,16 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         $eMentoring = false;
         if ($request->has('form/ementoring')) {
-            $eMentoring = $request->retrieve(
+            /*$eMentoring = $request->retrieve(
                 'form/ementoring',
                 $refinery->kindlyTo()->string()
-            );
+            );*/
+            $eMentoring = true;
+        }
+
+        $homework = false;
+        if ($request->has('form/homework')) {
+            $homework = true;
         }
 
         $userId = $this->dic->user()->getId();
@@ -1256,6 +1264,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 isset($course['suggested_courses']),
                 isset($course['additional_offer']),
                 isset($course['entry_test']),
+                $homework,
                 $firstname,
                 $lastname
             );
@@ -1286,6 +1295,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $firstname,
                 $lastname,
                 $this->dic->user()->getId(),
+                $homework
             );
         }
     }
