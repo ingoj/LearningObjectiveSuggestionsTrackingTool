@@ -485,6 +485,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
                 const firstname = $('input[name="form/user_data/firstname"]');
                 const lastname = $('input[name="form/user_data/lastname"]');
+                const eMentoring = $('fieldset[data-il-ui-input-name="form/ementoring"] input[name="form/ementoring"]');
+                const homework = $('fieldset[data-il-ui-input-name="form/homework"]');
                 
                 submitButton.attr('disabled', true);
                 
@@ -496,6 +498,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                    toggleButton()
                 });
                 
+                eMentoring.change(function() {
+                  if($(this).is(':checked')) {
+                    homework.css('display', 'grid');
+                  } else {
+                    homework.css('display', 'none');
+                  }
+                }); 
+                 
                 function toggleButton() {
                     if (firstname.val().length === 0 || lastname.val().length === 0) {
                         submitButton.prop('disabled', true);
