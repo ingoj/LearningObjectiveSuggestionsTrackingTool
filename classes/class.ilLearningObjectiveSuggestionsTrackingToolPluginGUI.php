@@ -478,13 +478,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
          ->withSubmitLabel($this->pl->txt('modal_box_submit_button'))
          ->withOnLoadCode(function ($id) {
                 return <<<JS
-                const form = $('.modal-footer form');
+          
+                const form = $('#$id .modal-footer form');
                 const submitButton = form.find('button').first();
 
-                const firstname = $('input[name="form/user_data/firstname"]');
-                const lastname = $('input[name="form/user_data/lastname"]');
-                const eMentoring = $('fieldset[data-il-ui-input-name="form/ementoring"] input[name="form/ementoring"]');
-                const homework = $('fieldset[data-il-ui-input-name="form/homework"]');
+                const firstname = $('#$id input[name="form/user_data/firstname"]');
+                const lastname = $('#$id input[name="form/user_data/lastname"]');
+                const eMentoring = $('#$id fieldset[data-il-ui-input-name="form/ementoring"] input[name="form/ementoring"]');
+                const homework = $('#$id fieldset[data-il-ui-input-name="form/homework"]');
                 
                 submitButton.attr('disabled', true);
                 
