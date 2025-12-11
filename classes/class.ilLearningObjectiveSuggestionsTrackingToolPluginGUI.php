@@ -126,14 +126,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $inputRefId = $field->text($this->plugin->txt('ref_id'))
                               ->withValue($properties['ref_id'] ?? '');
 
-        $inputFinalTest = $field->checkbox($this->plugin->txt('final_test_display'))
-                            ->withValue(!empty($properties['final_test']));
+        $inputEntryTest = $field->checkbox($this->plugin->txt('entry_test_display'))
+                            ->withValue(!empty($properties['entry_test']));
 
         $form = $this->factory->input()->container()->form()->standard(
             $DIC->ctrl()->getFormAction($this, 'update'),
             [
                 'ref_id' => $inputRefId,
-                'final_test' => $inputFinalTest
+                'entry_test' => $inputEntryTest
             ]
         );
 
@@ -182,7 +182,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $formData = $formRequest->getData();
 
         $refId = (int) $formData['ref_id'];
-        $finalTest = $formData['final_test'];
+        $entryTest = $formData['entry_test'];
 
         if ($form->getError()) {
             $this->tpl->setOnScreenMessage('failure', $this->plugin->txt('error'));
@@ -195,7 +195,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
         $properties = $this->getProperties();
         $properties['ref_id'] = $refId;
-        $properties['final_test'] = $finalTest;
+        $properties['entry_test'] = $entryTest;
 
         if ($this->updateElement($properties)) {
             $tpl->setOnScreenMessage('success', $this->plugin->txt('updated_success'), true);
@@ -241,7 +241,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $learningObjectives,
                 $notRecommendedLearningObjectives,
                 $a_properties['ref_id'] ?? null,
-                isset($a_properties['final_test']) && (bool) $a_properties['final_test']
+                isset($a_properties['entry_test']) && (bool) $a_properties['entry_test']
             );
         }
         return $this->tpl->get();
@@ -438,7 +438,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 )->withDedicatedName('course_personalized_additional_offer_'  . $course['obj_id']);
 
                 $checkboxes['course_entry_test_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
-                    $this->pl->txt('entry_test')
+                    $this->pl->txt('entry_test_label')
                 )->withDedicatedName('course_entry_test_' . $course['obj_id']);
 
                 $userCourseRefIds = ilObject::_getAllReferences($course['obj_id']);
@@ -702,7 +702,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @param array       $learningObjectives
      * @param array       $learningObjectivesNotRecommended
      * @param string|null $propertiesRefId
-     * @param bool        $propertiesFinalTest
+     * @param bool        $propertiesEntryTest
      * @return void
      * @throws ilCtrlException
      * @throws Exception
@@ -711,7 +711,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         array $learningObjectives,
         array $learningObjectivesNotRecommended,
         ?string $propertiesRefId = null,
-        bool $propertiesFinalTest = false
+        bool $propertiesEntryTest = false
     ): void {
         global $DIC;
 
@@ -750,13 +750,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $totalSuggestions
         );
 
-        if (!empty($propertiesRefId)) {
-            $courseObjId = ilObjCourse::_lookupObjectId($propertiesRefId);
-            if ($propertiesFinalTest) {
-                $htmlSuggestedCourses .= '<div class="container-initial-test-button">' . $this->buildFinalTestButton($courseObjId) . '</div>';
-            }
-        }
-
         $courseRefId = $this->fetchUrlParameter('tracking_tool_ref_id', FILTER_SANITIZE_NUMBER_INT);
 
         $htmlNotSuggestedCourses = $this->getAccordionHtml(
@@ -765,6 +758,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $lastVisitedObjId,
         );
 
+        if (!empty($propertiesRefId)) {
+            $courseObjId = ilObjCourse::_lookupObjectId($propertiesRefId);
+            if ($propertiesEntryTest) {
+                $htmlNotSuggestedCourses .= '<div class="container-initial-test-button">' . $this->buildEntryTestButton($courseObjId) . '</div>';
+            }
+        }
 
         if (!empty($courseRefId)) {
             $certificateAccess = new ilParticipationCertificateAccess($courseRefId);
@@ -911,11 +910,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @return string
      * @throws ilCtrlException
      */
-    private function buildFinalTestButton(
+    private function buildEntryTestButton(
         int $courseObjId
     ): string {
-        $finalTest = $this->getDataFinalTest($courseObjId);
-        $testObjId = ilObject::_lookupObjId($finalTest['qtest']);
+        $entryTest = $this->getDataEntryTest($courseObjId);
+        $testObjId = ilObject::_lookupObjId($entryTest['itest']);
+
+
         $testId = ilObjTest::_getTestIDFromObjectID($testObjId);
 
         $activeId = ilObjTest::_getActiveIdOfUser(
@@ -923,12 +924,36 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         );
 
         if(!empty($activeId)) {
-            $linkFinalTestResults = $this->buildFinalTestResultsLink((int) $finalTest['qtest'], (int) $activeId);
-            $finalTestLink = $this->factory->link()->standard($this->pl->txt('final_test'), $linkFinalTestResults);
+            $linkEntryTestResults = $this->buildEntryTestResultsLink((int) $entryTest['itest'], (int) $activeId);
+            $entryTestLink = $this->factory->link()->standard($this->pl->txt('entry_test'), $linkEntryTestResults);
 
-            return $this->renderer->render($finalTestLink);
+            return $this->renderer->render($entryTestLink);
         }
         return '';
+    }
+
+    /**
+     * @param int $objId
+     * @return array
+     */
+    public static function getDataEntryTest(int $objId): array
+    {
+        global $DIC;
+
+        $ilDB = $DIC->database();
+
+        $result = $ilDB->queryF(
+            "SELECT * FROM loc_settings
+              WHERE obj_id = %s AND itest IS NOT NULL",
+            ['integer'],
+            [$objId]
+        );
+
+        $data = [];
+        while ($row = $ilDB->fetchAssoc($result)) {
+            $data = $row;
+        }
+        return $data;
     }
 
     /**
@@ -1118,6 +1143,38 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             'ilTestEvaluationGUI',
             'ref_id',
             $finalTestReId
+        );
+
+        return $this->ctrl->getLinkTargetByClass(
+            [
+                ilRepositoryGUI::class,
+                ilObjTestGUI::class,
+                ilTestEvaluationGUI::class
+            ],
+            'showResults'
+        );
+    }
+
+    /**
+     * @param int $entryTestReId
+     * @param int $activeId
+     * @return string
+     * @throws ilCtrlException
+     */
+    private function buildEntryTestResultsLink(
+        int $entryTestReId,
+        int $activeId
+    ): string {
+        $this->ctrl->setParameterByClass(
+            'ilTestEvaluationGUI',
+            'active_ids',
+            $activeId
+        );
+
+        $this->ctrl->setParameterByClass(
+            'ilTestEvaluationGUI',
+            'ref_id',
+            $entryTestReId
         );
 
         return $this->ctrl->getLinkTargetByClass(

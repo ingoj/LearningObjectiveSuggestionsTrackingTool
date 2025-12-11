@@ -382,5 +382,12 @@
 }
 
 .container-tracking-tool .container-initial-test-button  {
-    margin-top: 10px;
+    border-top: 1px solid #A2BAE1;
+    margin-top: 20px;
+    padding-bottom: 15px;
+    padding-top: 15px;
+}
+
+.container-tracking-tool .container-initial-test-button a:link  {
+    color: #A2BAE1;
 }
