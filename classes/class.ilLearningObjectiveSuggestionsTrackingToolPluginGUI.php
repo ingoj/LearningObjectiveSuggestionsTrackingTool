@@ -744,6 +744,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $learningObjectives,
             $index,
             $lastVisitedObjId,
+            false,
             $suggestedKeys,
             $totalSuggestions
         );
@@ -754,6 +755,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $learningObjectivesNotRecommended,
             $index,
             $lastVisitedObjId,
+            true
         );
 
         if (!empty($propertiesRefId)) {
@@ -790,9 +792,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         array $learningObjectives,
         int &$index,
         $lastVisitedObjId,
+        bool $notRecommendedCourses = false,
         ?array $suggestedKeys = null,
         ?int $totalSuggestions = null
-
     ): string {
         $html = '';
         foreach ($learningObjectives as $learningObjectiveObjId => $learningObjective) {
@@ -866,9 +868,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $html .= '</span>';
 
             $html .= '<span class="count-courses ' . $classStatusCourses . '-courses">' . $learningObjective['count_completed_courses'] . ' von ' . count($learningObjective['courses']) . '</span>';
-            $html .= '<div class="container-weight">';
-            $html .= '<span class="weight">' . $htmlIconsAlert . '</span>';
-            $html .= '</div>';
+            if(!$notRecommendedCourses) {
+                $html .= '<div class="container-weight">';
+                $html .= '<span class="weight">' . $htmlIconsAlert . '</span>';
+                $html .= '</div>';
+            }
             $html .= '</div>';
 
             $html .= '<div class="container-percent-line">';
