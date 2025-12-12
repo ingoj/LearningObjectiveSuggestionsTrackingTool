@@ -248,10 +248,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param int $courseRefId
+     * @param int|null $courseRefId
      * @return array
      */
-    private function getNotRecommendedLearningModules(int $courseRefId): array
+    private function getNotRecommendedLearningModules(?int $courseRefId = null): array
     {
         $learningObjectives = [];
         if (!empty($courseRefId)) {
@@ -293,7 +293,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                             foreach ($learningObjectivesNotRecommended[$courseObjId] as $notRecommended) {
                                 /* @var ilLearnObjectFinalTestState $value */
                                 /* @var LearningObjective $notRecommended */
-
                                 if ($notRecommended->getId() === $value->getLocftestMasterObjectiveId()) {
                                     $learningObjectives[$value->getLocftestCrsObjId()] = array(
                                         'txt' => $value->getLocftestLearnObjectiveTitle(),
@@ -351,7 +350,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         while ($row = $this->dic->database()->fetchObject($set)) {
             $objective = $calculation->getLearningObjective($course, $row->objective_id);
-
             $weightRough = $config->getWeightRough($objective, $studyProgram);
             if ((int) $weightRough === 0) {
                 $learningObjectivesNotRecommended[$row->course_id][] = $objective;
