@@ -477,7 +477,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
          ->withOnLoadCode(function ($id) {
                 return <<<JS
           
+                const modal = $('#$id');
                 const form = $('#$id .modal-footer form');
+                const formBody = $('#$id .modal-body form');
                 const submitButton = form.find('button').first();
 
                 const firstname = $('#$id input[name="form/user_data/firstname"]');
@@ -512,6 +514,62 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
                 
                 toggleButton();
+                
+                
+                modal.on('submit', 'form', function(e) {
+                  e.preventDefault();
+                  
+                   const formData = new FormData(this);
+                   
+                  $.ajax({
+                    url: formBody.attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data.success && data.pdf_base64) {
+                            // Convert Base64 string to binary data
+                            const byteChars = atob(data.pdf_base64);
+                            const byteNumbers = new Array(byteChars.length);
+                            for (let i = 0; i < byteChars.length; i++) {
+                                byteNumbers[i] = byteChars.charCodeAt(i);
+                            }
+                            const byteArray = new Uint8Array(byteNumbers);
+                    
+                            // Create a Blob (PDF)
+                            const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    
+                            // Create a download URL
+                            const url = URL.createObjectURL(blob);
+                    
+                            // Trigger download
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = 'certificate.pdf';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                    
+                            // Free memory
+                            URL.revokeObjectURL(url);
+                    
+                            // 5) Redirect after download
+                            const redirectUrl = new URL(window.location.href);
+                            redirectUrl.searchParams.delete('tracking_tool_ref_id');
+                            window.location.href = redirectUrl.toString();
+                        } else {
+                            alert('Error generating PDF.');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert('Error generating PDF.');
+                    }
+                              
+                });
+                
+           });
         JS;
             });
         ;
