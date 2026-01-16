@@ -480,6 +480,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 const modal = $('#$id');
                 const form = $('#$id .modal-footer form');
                 const formBody = $('#$id .modal-body form');
+                const formHeader = $('#$id .modal-header form');
+                const closeButton = formHeader.find('button').first();
                 const submitButton = form.find('button').first();
 
                 const firstname = $('#$id input[name="form/user_data/firstname"]');
@@ -488,6 +490,30 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 const homework = $('#$id fieldset[data-il-ui-input-name="form/homework"]');
                 
                 submitButton.attr('disabled', true);
+                
+                function toggleButton() {
+                    if (firstname.val().length === 0 || lastname.val().length === 0) {
+                        submitButton.prop('disabled', true);
+                    } else {
+                        submitButton.prop('disabled', false);
+                    }
+                }
+                
+                function redirection() {
+                    const redirectUrl = new URL(window.location.href);
+                    redirectUrl.searchParams.delete('tracking_tool_ref_id');
+                    window.location.href = redirectUrl.toString();
+                }
+                
+                function closeModalBox(e) {
+                  e.preventDefault();
+                  
+                  alert("OK");
+                  
+                  
+                }
+                
+                toggleButton();
                 
                 firstname.change(function() {
                  toggleButton();
@@ -504,22 +530,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     homework.css('display', 'none');
                   }
                 }); 
-                 
-                function toggleButton() {
-                    if (firstname.val().length === 0 || lastname.val().length === 0) {
-                        submitButton.prop('disabled', true);
-                    } else {
-                        submitButton.prop('disabled', false);
-                    }
-                }
                 
-                toggleButton();
+                closeButton.click(function() {
+                   redirection();
+                });
                 
-                
-                modal.on('submit', 'form', function(e) {
+                modal.on('submit', '.modal-body form', function(e) {
                   e.preventDefault();
                   
-                   const formData = new FormData(this);
+                  const formData = new FormData(this);
                    
                   $.ajax({
                     url: formBody.attr('action'),
@@ -556,17 +575,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                             URL.revokeObjectURL(url);
                     
                             // 5) Redirect after download
-                            const redirectUrl = new URL(window.location.href);
-                            redirectUrl.searchParams.delete('tracking_tool_ref_id');
-                            window.location.href = redirectUrl.toString();
+                            redirection();
                         } else {
-                            alert('Error generating PDF.');
+                            redirection();
                         }
                     },
                     error: function (xhr, status, error) {
-                        alert('Error generating PDF.');
+                        redirection()
                     }
-                              
                 });
                 
            });
@@ -824,20 +840,15 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         }
 
         if (!empty($courseRefId)) {
-            $certificateAccess = new ilParticipationCertificateAccess($courseRefId);
+            $this->ctrl->setParameterByClass(
+                self::class,
+                'tracking_tool_ref_id',
+                $courseRefId
+            );
 
-
-            if ($certificateAccess->isSelfPrintEnabled()) {
-                $this->ctrl->setParameterByClass(
-                    self::class,
-                    'tracking_tool_ref_id',
-                    $courseRefId
-                );
-
-                $htmlNotSuggestedCourses .= $this->renderer->render(
-                    component: [$this->getModal()]
-                );
-            }
+            $htmlNotSuggestedCourses .= $this->renderer->render(
+                component: [$this->getModal()]
+            );
         }
 
         $this->setTemplateBlock($htmlSuggestedCourses, $htmlNotSuggestedCourses, $propertiesRefId);
@@ -1124,14 +1135,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('HTML_SUGGESTED_COURSES', $htmlSuggestedCourses);
 
         if(!empty($refId)) {
-            $certificateAccess = new ilParticipationCertificateAccess($refId);
-            $printButton = '';
-            if($certificateAccess->isSelfPrintEnabled()) {
-                $printLink = $this->buildPrintLink($refId);
-                $printButton = '<a href="' . $printLink . '" class="print-button-visible">';
-                $printButton .= '<img src="Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool/templates/images/icon_file.svg" class="icon-file">';
-                $printButton .= '</a>';
-            }
+            $printLink = $this->buildPrintLink($refId);
+            $printButton = '<a href="' . $printLink . '" class="print-button-visible">';
+            $printButton .= '<img src="Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool/templates/images/icon_file.svg" class="icon-file">';
+            $printButton .= '</a>';
+
             $this->tpl->setVariable('PRINT_BUTTON', $printButton);
         }
 
@@ -1350,10 +1358,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
         if ($printError) {
             $tpl = $this->dic->ui()->mainTemplate();
-            $tpl->setOnScreenMessage('failure',$this->lng->txt('no_permission'), true);
-            $this->ctrl->redirectByClass(
-                [ilRepositoryGUI::class, ilObjCategoryGUI::class]
-            );
+            $tpl->setOnScreenMessage('failure', $this->lng->txt('no_permission'), true);
+
+            echo json_encode([
+                'success' => false
+            ]);
+            exit;
         }
 
         $coursesToPrint = $this->excludeCoursesWithNoPrintPermission($coursesToPrint);
@@ -1361,10 +1371,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         if (empty($coursesToPrint)) {
             $tpl = $this->dic->ui()->mainTemplate();
             $tpl->setOnScreenMessage('failure',$this->pl->txt('no_courses_selected'), true);
-            $this->ctrl->redirectByClass(
-                [ilRepositoryGUI::class, ilObjCategoryGUI::class],
-                'view'
-            );
+            echo json_encode([
+                'success' => false
+            ]);
+            exit;
         }
 
         if (count(array_keys($coursesToPrint)) === 1) {
@@ -1381,6 +1391,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             );
 
             $twigParser->parseData(
+                true,
                 true,
                 $course['ref_id'],
                 isset($course['suggested_courses']),
@@ -1417,6 +1428,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 $firstname,
                 $lastname,
                 $this->dic->user()->getId(),
+                true,
                 $homework
             );
         }
