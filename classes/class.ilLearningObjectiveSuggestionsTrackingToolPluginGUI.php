@@ -235,7 +235,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         if (!empty($a_properties)) {
             $learningObjectives = $this->getTrackingToolLearningObjectives($a_properties['ref_id'] ?? null);
 
-            $notRecommendedLearningObjectives = $this->getNotRecommendedLearningModules((int) $a_properties['ref_id'] ?? null);
+            $notRecommendedLearningObjectives = [];
+            foreach ($learningObjectives as $key => $learningObjective) {
+                if (!$learningObjective['suggested']) {
+                    $notRecommendedLearningObjectives[$key] = $learningObjective;
+                    unset($learningObjectives[$key]);
+                }
+            }
 
             $this->buildAccordionHtml(
                 $learningObjectives,
@@ -245,118 +251,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             );
         }
         return $this->tpl->get();
-    }
-
-    /**
-     * @param int|null $courseRefId
-     * @return array
-     */
-    private function getNotRecommendedLearningModules(?int $courseRefId = null): array
-    {
-        $learningObjectives = [];
-        if (!empty($courseRefId)) {
-            $courseObjId = ilObjCourse::_lookupObjectId($courseRefId);
-            $finalTestsStates = self::getData($courseObjId, [$this->userId]);
-            $learningObjectivesNotRecommended = $this->getNotRecommendedLearningObjectives($courseRefId, $this->userId);
-
-            $requiredPercentages = [];
-            foreach ($finalTestsStates as $key => $finalTestState) {
-                foreach ($finalTestState as $k => $value) {
-                    $masterCrsId = $value[0]->getLocftestMasterCrsId();
-                    $dataFinalTest = $this->getDataFinalTest($courseObjId);
-
-                    $tst = null;
-                    if (!empty($dataFinalTest['qtest'])) {
-                        $tst = new ilObjTest($dataFinalTest['qtest'], true);
-                    }
-
-                    if ($tst instanceof ilObjTest) {
-                        $schema = $tst->getMarkSchema();
-                        foreach ($schema->getMarkSteps() as $mark) {
-                            if ($mark->getPassed()) {
-                                $requiredPercentages[$masterCrsId] = (int) $mark->getMinimumLevel();
-                                break;
-                            }
-                        }
-                    }
-
-                    if (empty($requiredPercentages)) {
-                        $requiredPercentages[$masterCrsId] = 60;
-                    }
-                }
-            }
-
-            if (!empty($finalTestsStates[$this->userId])) {
-                foreach ($finalTestsStates[$this->userId] as $objectiveId => $finalTestsState) {
-                    foreach ($finalTestsState as $value) {
-                        if (!empty($learningObjectivesNotRecommended[$courseObjId])) {
-                            foreach ($learningObjectivesNotRecommended[$courseObjId] as $notRecommended) {
-                                /* @var ilLearnObjectFinalTestState $value */
-                                /* @var LearningObjective $notRecommended */
-                                if ($notRecommended->getId() === $value->getLocftestMasterObjectiveId()) {
-                                    $learningObjectives[$value->getLocftestCrsObjId()] = array(
-                                        'txt' => $value->getLocftestLearnObjectiveTitle(),
-                                        'obj_id' => $courseObjId,
-                                        'objective_id' => $objectiveId,
-                                        'default' => true,
-                                        'width' => 'auto',
-                                        'suggested' => false,
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if( !empty($finalTestsStates[$this->userId])) {
-                $trackingToolData = $this->getTrackingToolData($finalTestsStates, $this->userId);
-
-                $learningObjectives = $this->storeCoursesInLearningObjectives(
-                    $learningObjectives,
-                    $trackingToolData,
-                    $requiredPercentages
-                );
-            }
-        }
-        return $learningObjectives;
-    }
-
-    /**
-     * @param int $courseRefId
-     * @param int $userId
-     * @return array
-     */
-    private function getNotRecommendedLearningObjectives(
-        int $courseRefId,
-        int $userId
-    ): array {
-        $course = new SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveCourse(new ilObjCourse($courseRefId, true));
-
-        $config = new CourseConfigProvider($course);
-
-        $calculation = new CalculateScoresAndSuggestions(
-            $this->dic->database(),
-            new ConfigProvider(),
-            new Log()
-        );
-
-        $user = new User(new ilObjUser($userId));
-        $set = $this->dic->database()->query($calculation->getSQL($course, $user));
-
-        $studyProgramQuery = new StudyProgramQuery($config);
-        $studyProgram = $studyProgramQuery->getByUser($user);
-        $learningObjectivesNotRecommended = [];
-
-        while ($row = $this->dic->database()->fetchObject($set)) {
-            $objective = $calculation->getLearningObjective($course, $row->objective_id);
-            $weightRough = $config->getWeightRough($objective, $studyProgram);
-            if ((int) $weightRough === 0) {
-                $learningObjectivesNotRecommended[$row->course_id][] = $objective;
-            }
-        }
-
-        return $learningObjectivesNotRecommended;
     }
 
     /**
@@ -736,7 +630,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
             }
         }
-
         return $learningObjectives;
     }
 
@@ -1508,6 +1401,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             if (key_exists('weight_fine_' . $score->getObjectiveId(), $weights)) {
                 $fine = $weights['weight_fine_' . $score->getObjectiveId()];
             }
+
             $suggested = false;
             foreach ($suggs as $sugg) {
                 /**
