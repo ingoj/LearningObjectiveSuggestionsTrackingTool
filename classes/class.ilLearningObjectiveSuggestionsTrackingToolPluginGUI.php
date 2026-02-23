@@ -878,22 +878,11 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         int $courseObjId
     ): string {
         $entryTest = $this->getDataEntryTest($courseObjId);
-        $testObjId = ilObject::_lookupObjId($entryTest['itest']);
 
+        $linkEntryTestResults = $this->buildEntryTestResultsLink((int) $entryTest['itest']);
+        $entryTestLink = $this->factory->link()->standard($this->pl->txt('entry_test'), $linkEntryTestResults);
 
-        $testId = ilObjTest::_getTestIDFromObjectID($testObjId);
-
-        $activeId = ilObjTest::_getActiveIdOfUser(
-            $this->userId, $testId
-        );
-
-        if(!empty($activeId)) {
-            $linkEntryTestResults = $this->buildEntryTestResultsLink((int) $entryTest['itest'], (int) $activeId);
-            $entryTestLink = $this->factory->link()->standard($this->pl->txt('entry_test'), $linkEntryTestResults);
-
-            return $this->renderer->render($entryTestLink);
-        }
-        return '';
+        return $this->renderer->render($entryTestLink);
     }
 
     /**
@@ -1085,67 +1074,26 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param int $finalTestReId
-     * @param int $activeId
-     * @return string
-     * @throws ilCtrlException
-     */
-    private function buildFinalTestResultsLink(
-        int $finalTestReId,
-        int $activeId
-    ): string {
-        $this->ctrl->setParameterByClass(
-            'ilTestEvaluationGUI',
-            'active_ids',
-            $activeId
-        );
-
-        $this->ctrl->setParameterByClass(
-            'ilTestEvaluationGUI',
-            'ref_id',
-            $finalTestReId
-        );
-
-        return $this->ctrl->getLinkTargetByClass(
-            [
-                ilRepositoryGUI::class,
-                ilObjTestGUI::class,
-                ilTestEvaluationGUI::class
-            ],
-            'showResults'
-        );
-    }
-
-    /**
      * @param int $entryTestReId
      * @param int $activeId
      * @return string
      * @throws ilCtrlException
      */
     private function buildEntryTestResultsLink(
-        int $entryTestReId,
-        int $activeId
+        int $entryTestReId
     ): string {
-        $this->ctrl->setParameterByClass(
-            'ilTestEvaluationGUI',
-            'active_ids',
-            $activeId
-        );
 
         $this->ctrl->setParameterByClass(
-            'ilTestEvaluationGUI',
+            'ilTestEvalObjectiveOrientedGUI',
             'ref_id',
             $entryTestReId
         );
 
-        return $this->ctrl->getLinkTargetByClass(
-            [
-                ilRepositoryGUI::class,
-                ilObjTestGUI::class,
-                ilTestEvaluationGUI::class
-            ],
-            'showResults'
-        );
+        return $this->ctrl->getLinkTargetByClass([
+            ilObjTestGUI::class,
+            ilTestResultsGUI::class,
+            ilTestEvalObjectiveOrientedGUI::class
+        ]);
     }
 
     /**
