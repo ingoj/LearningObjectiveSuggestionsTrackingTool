@@ -399,14 +399,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                     window.location.href = redirectUrl.toString();
                 }
                 
-                function closeModalBox(e) {
-                  e.preventDefault();
-                  
-                  alert("OK");
-                  
-                  
-                }
-                
                 toggleButton();
                 
                 firstname.change(function() {
@@ -433,7 +425,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                   e.preventDefault();
                   
                   const formData = new FormData(this);
-                   
+                  
                   $.ajax({
                     url: formBody.attr('action'),
                     type: 'POST',
