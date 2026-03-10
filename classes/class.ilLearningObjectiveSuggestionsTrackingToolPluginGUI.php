@@ -258,7 +258,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function getModal()
     {
-        $modalFormAction = $this->ctrl->getLinkTargetByClass(
+        $modalFormAction = $this->dic->ctrl()->getLinkTargetByClass(
             [ilUIPluginRouterGUI::class, ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class],
             self::CMD_PRINT_CERTIFICATE
         );
@@ -717,7 +717,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             true
         );
 
-        if (!empty($propertiesRefId)) {
+        $type = ilObject::_lookupType($propertiesRefId, true);
+
+        if (!empty($propertiesRefId) && $type === 'crs') {
             $courseObjId = ilObjCourse::_lookupObjectId($propertiesRefId);
             if ($propertiesEntryTest) {
                 $htmlNotSuggestedCourses .= '<div class="container-initial-test-button">' . $this->buildEntryTestButton($courseObjId) . '</div>';
@@ -955,7 +957,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function getCourseLink(): string
     {
-        return $this->ctrl->getLinkTargetByClass(ilRepositoryGUI::class);
+        return $this->dic->ctrl()->getLinkTargetByClass(ilRepositoryGUI::class);
     }
 
     /**
@@ -1059,7 +1061,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $refId
         );
 
-        return $this->ctrl->getLinkTargetByClass(
+        return $this->dic->ctrl()->getLinkTargetByClass(
             [ilRepositoryGUI::class, ilObjCategoryGUI::class],
             'view'
         );
@@ -1081,7 +1083,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $entryTestReId
         );
 
-        return $this->ctrl->getLinkTargetByClass([
+        return $this->dic->ctrl()->getLinkTargetByClass([
             ilObjTestGUI::class,
             ilTestResultsGUI::class,
             ilTestEvalObjectiveOrientedGUI::class
