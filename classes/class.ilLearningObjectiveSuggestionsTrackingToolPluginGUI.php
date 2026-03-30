@@ -259,7 +259,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function getModal()
     {
-        $modalFormAction = $this->ctrl->getLinkTargetByClass(
+        $modalFormAction = $this->dic->ctrl()->getLinkTargetByClass(
             [ilUIPluginRouterGUI::class, ilLearningObjectiveSuggestionsTrackingToolPluginGUI::class],
             self::CMD_PRINT_CERTIFICATE
         );
@@ -718,7 +718,9 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             true
         );
 
-        if (!empty($propertiesRefId)) {
+        $type = ilObject::_lookupType($propertiesRefId, true);
+
+        if (!empty($propertiesRefId) && $type === 'crs') {
             $courseObjId = ilObjCourse::_lookupObjectId($propertiesRefId);
             if ($propertiesEntryTest) {
                 $htmlNotSuggestedCourses .= '<div class="container-initial-test-button">' . $this->buildEntryTestButton($courseObjId) . '</div>';
@@ -956,7 +958,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      */
     private function getCourseLink(): string
     {
-        return $this->ctrl->getLinkTargetByClass(ilRepositoryGUI::class);
+        return $this->dic->ctrl()->getLinkTargetByClass(ilRepositoryGUI::class);
     }
 
     /**
@@ -976,24 +978,24 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     /**
      * @param string      $htmlSuggestedCourses
      * @param string      $htmlNotSuggestedCourses
-     * @param string|null $refId
+     * @param string|null $propertiesRefId
      * @return void
      * @throws ilCtrlException
      */
     private function setTemplateBlock(
         string $htmlSuggestedCourses,
         string $htmlNotSuggestedCourses,
-        ?string $refId = null
+        ?string $propertiesRefId = null
     ): void {
         $this->tpl->setCurrentBlock('tracking_tool');
-        $this->setVariables($htmlSuggestedCourses, $htmlNotSuggestedCourses, $refId);
+        $this->setVariables($htmlSuggestedCourses, $htmlNotSuggestedCourses, $propertiesRefId);
         $this->tpl->parseCurrentBlock();
     }
 
     /**
      * @param string      $htmlSuggestedCourses
      * @param string      $htmlNotSuggestedCourses
-     * @param string|null $refId
+     * @param string|null $propertiesRefId
      * @return void
      * @throws ilCtrlException
      * @throws Exception
@@ -1001,7 +1003,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     private function setVariables(
         string $htmlSuggestedCourses,
         string $htmlNotSuggestedCourses,
-        ?string $refId = null
+        ?string $propertiesRefId = null
     ): void {
         $this->tpl->setVariable('TITLE', $this->pl->txt('title'));
         $this->tpl->setVariable('SUBTITLE', $this->pl->txt('subtitle'));
@@ -1009,8 +1011,8 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->tpl->setVariable('LEARNING_SUGGESTION', $this->pl->txt('learning_suggestion') . ' <span class="lets-get-started">' . $this->pl->txt('lets_get_started') . '</span>');
         $this->tpl->setVariable('HTML_SUGGESTED_COURSES', $htmlSuggestedCourses);
 
-        if(!empty($refId)) {
-            $printLink = $this->buildPrintLink($refId);
+        if(!empty($propertiesRefId)) {
+            $printLink = $this->buildPrintLink($propertiesRefId);
             $printButton = '<a href="' . $printLink . '" class="print-button-visible">';
             $printButton .= '<img src="Customizing/global/plugins/Services/COPage/PageComponent/LearningObjectiveSuggestionsTrackingTool/templates/images/icon_file.svg" class="icon-file">';
             $printButton .= '</a>';
@@ -1040,13 +1042,21 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     }
 
     /**
-     * @param string $refId
+     * @param string $propertiesRefId
      * @return string
      * @throws ilCtrlException
      */
-    private function buildPrintLink(string $refId): string
+    private function buildPrintLink(string $propertiesRefId): string
     {
         $itemRefId = $this->fetchUrlParameter('item_ref_id', FILTER_DEFAULT);
+        $refId= $this->fetchUrlParameter('ref_id', FILTER_DEFAULT);
+
+        $this->ctrl->setParameterByClass(
+            'ilObjCategoryGUI',
+            'ref_id',
+            $refId
+        );
+
 
         $this->ctrl->setParameterByClass(
             'ilObjCategoryGUI',
@@ -1057,10 +1067,10 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
         $this->ctrl->setParameterByClass(
             'ilObjCategoryGUI',
             'tracking_tool_ref_id',
-            $refId
+            $propertiesRefId
         );
 
-        return $this->ctrl->getLinkTargetByClass(
+        return $this->dic->ctrl()->getLinkTargetByClass(
             [ilRepositoryGUI::class, ilObjCategoryGUI::class],
             'view'
         );
@@ -1068,7 +1078,6 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
 
     /**
      * @param int $entryTestReId
-     * @param int $activeId
      * @return string
      * @throws ilCtrlException
      */
@@ -1082,7 +1091,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $entryTestReId
         );
 
-        return $this->ctrl->getLinkTargetByClass([
+        return $this->dic->ctrl()->getLinkTargetByClass([
             ilObjTestGUI::class,
             ilTestResultsGUI::class,
             ilTestEvalObjectiveOrientedGUI::class
