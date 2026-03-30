@@ -19,6 +19,7 @@ use ILIAS\DI\Container;
 use ILIAS\UI\Factory;
 use ILIAS\UI\Renderer;
 use ILIAS\Container\InternalDomainService;
+use JetBrains\PhpStorm\NoReturn;
 
 /**
  * @ilCtrl_isCalledBy ilLearningObjectiveSuggestionsTrackingToolPluginGUI: ilPCPluggedGUI
@@ -318,7 +319,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             $courseRefId = $this->getCourseRefId($course['obj_id']);
             $certificateAccess = new ilParticipationCertificateAccess($courseRefId);
 
-            if ($certificateAccess->hasCurrentUserPrintAccess()) {
+            if ($certificateAccess->hasCurrentUserPrintAccess(true)) {
                 $checkboxes = [];
 
                 $checkboxes['course_suggested_courses_' . $course['obj_id']] = $this->factory->input()->field()->checkbox(
@@ -1308,13 +1309,14 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
      * @return array
      * @throws Exception
      */
+    #[NoReturn]
     private function excludeCoursesWithNoPrintPermission(array $coursesToPrint): array
     {
         foreach ($coursesToPrint as $objId => $course) {
             $courseRefId = $this->getCourseRefId($objId);
             $certificateAccess = new ilParticipationCertificateAccess($courseRefId);
 
-            if (!$certificateAccess->hasCurrentUserPrintAccess()) {
+            if (!$certificateAccess->hasCurrentUserPrintAccess(true)) {
                 unset($coursesToPrint[$objId]);
             }
         }
