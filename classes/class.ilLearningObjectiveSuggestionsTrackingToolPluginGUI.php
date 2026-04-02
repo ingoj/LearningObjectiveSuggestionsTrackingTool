@@ -9,6 +9,9 @@ use setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException;
 use setasign\Fpdi\PdfParser\PdfParserException;
 use setasign\Fpdi\PdfParser\Type\PdfTypeException;
 use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjective;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveCourse;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveQuery;
+use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\LearningObjective\LearningObjectiveResult;
 use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\User\User;
 use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\Config\CourseConfigProvider;
 use SRAG\ILIAS\Plugins\LearningObjectiveSuggestions\User\StudyProgramQuery;
@@ -489,7 +492,7 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     ): array {
         $sorted = $this->sortByScore();
 
-        $learningObjectives = [];
+        $trackingLearningObjectives = [];
         if (!empty($refId)) {
 
             $courseObjId = ilObjCourse::_lookupObjectId($refId);
@@ -522,21 +525,24 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                 }
             }
 
+            $learningObjectives = [];
             if (count($finalTestsStates)) {
                 $learningObjectives = $this->getLearningObjectives($sorted, $finalTestsStates[$this->userId]);
             }
 
+
             if( !empty($finalTestsStates[$this->userId])) {
                 $trackingToolData = $this->getTrackingToolData($finalTestsStates, $this->userId);
 
-                $learningObjectives = $this->storeCoursesInLearningObjectives(
+                $trackingLearningObjectives = $this->storeCoursesInLearningObjectives(
                     $learningObjectives,
                     $trackingToolData,
                     $requiredPercentages
                 );
             }
         }
-        return $learningObjectives;
+
+        return $trackingLearningObjectives;
     }
 
     /**
@@ -609,6 +615,12 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
             if (array_key_exists($sort_key, $finalTestsStatesUser)) {
                 /** @var ilLearnObjectFinalTestState $finalTestsState */
                 $finalTestsStates_course = $finalTestsStatesUser[$sort_key];
+                $weightRough = $this->getWeightRough((int) $sort_arr['obj_id'], (int) $sort_arr['objective_id']);
+
+                $suggested = false;
+                if((int) $weightRough > 0) {
+                    $suggested = true;
+                }
 
                 foreach ($finalTestsStates_course as $finalTestsState) {
                     $learningObjectives[$finalTestsState->getLocftestCrsObjId()] = array(
@@ -618,12 +630,40 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
                         'default' => true,
                         'score' => $sort_arr['score'],
                         'width' => 'auto',
-                        'suggested' => $sort_arr['suggested'],
+                        'suggested' => $suggested,
                     );
                 }
             }
         }
         return $learningObjectives;
+    }
+
+    /**
+     * @param int $courseId
+     * @param int $learningObjectiveId
+     * @return int|string
+     */
+    private function getWeightRough(int $courseId, int $learningObjectiveId)
+    {
+        global $DIC;
+
+        $calculation = new CalculateScoresAndSuggestions(
+            $DIC->database(),
+            new ConfigProvider(),
+            new Log()
+        );
+
+
+        $course = new LearningObjectiveCourse(new ilObjCourse($courseId, false));
+        $learningObjective = $calculation->getLearningObjective($course, $learningObjectiveId);
+
+        $user = new User(new ilObjUser($DIC->user()->getId()));
+        $objectiveResult = new LearningObjectiveResult($learningObjective, $user);
+        $config = new CourseConfigProvider($course);
+        $studyProgramQuery = new StudyProgramQuery($config);
+        $studyProgram = $studyProgramQuery->getByUser($user);
+
+        return $config->getWeightRough($learningObjective, $studyProgram);
     }
 
     /**
@@ -1049,14 +1089,13 @@ class ilLearningObjectiveSuggestionsTrackingToolPluginGUI extends ilPageComponen
     private function buildPrintLink(string $propertiesRefId): string
     {
         $itemRefId = $this->fetchUrlParameter('item_ref_id', FILTER_DEFAULT);
-        $refId= $this->fetchUrlParameter('ref_id', FILTER_DEFAULT);
+        $refId = $this->fetchUrlParameter('ref_id', FILTER_DEFAULT);
 
         $this->ctrl->setParameterByClass(
             'ilObjCategoryGUI',
             'ref_id',
             $refId
         );
-
 
         $this->ctrl->setParameterByClass(
             'ilObjCategoryGUI',
